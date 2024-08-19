@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
-import { SuccessResponse } from "../types";
+import { ErrorResponse, SuccessResponse } from "../types";
 import { StatusCodes } from "http-status-codes";
 import { fetchTasksByUserId, getDailyWorkingHours } from "../helper/functions";
 
@@ -15,34 +15,44 @@ type BarChartResponse = {
 }
 
 // @desc  Get required data for the bar chart
-// @route GET /api/charts/pie
-export const getBarChartData = asyncHandler(async (req: Request, res: Response) => {
-  // const user_id = req.user.id;
+// @route GET /api/charts/:model
+export const getChartData = asyncHandler(async (req: Request, res: Response) => {
   const user_id = 1;
-  const tasks = await fetchTasksByUserId(user_id, "weekly")
+  const model: string = req.params.model;
 
-  const { series, option } = getDailyWorkingHours(tasks);
+  let responseData;
 
-  const successResponse: SuccessResponse<BarChartResponse> = {
-    status: StatusCodes.OK,
-    success: true,
-    data: {
-      option,
-      series
-    }
+  switch (model) {
+    case "bar":
+      responseData = await getBarChart(user_id);
+      break;
+    case "pie":
+      responseData = await getPieChart(user_id);
+      break;
+    default:
+      const errorResponse: ErrorResponse = {
+        status: StatusCodes.BAD_REQUEST,
+        message: "Invalid chart model"
+      }
+
+      res.status(StatusCodes.BAD_REQUEST).json(errorResponse);
+      return;
   }
 
-  res.status(StatusCodes.OK).json(successResponse)
+  const successResponse: SuccessResponse<BarChartResponse | PieChartResponse> = {
+    status: StatusCodes.OK,
+    success: true,
+    data: responseData
+  }
+
+  res.status(StatusCodes.OK).json(successResponse);
 })
 
-// @desc  Get required data for the pie chart
-// @route GET /api/charts/pie
-export const getPieChartData = asyncHandler(async (req: Request, res: Response) => {
-  // const user_id = req.user.id;
-  const user_id = 1
-
-  const monthlyTasks = await fetchTasksByUserId(user_id, "monthly");
-  const weeklyTasks = await fetchTasksByUserId(user_id, "weekly");
+const getPieChart = async (user_id: number) => {
+  const [monthlyTasks, weeklyTasks] = await Promise.all([
+    fetchTasksByUserId(user_id, "monthly"),
+    fetchTasksByUserId(user_id, "weekly")
+  ]);
 
   const { series: monthlySeries } = getDailyWorkingHours(monthlyTasks);
   const { series: weeklySeries } = getDailyWorkingHours(weeklyTasks);
@@ -56,14 +66,16 @@ export const getPieChartData = asyncHandler(async (req: Request, res: Response) 
     return series + val
   }, 0)
 
-  const successResponse: SuccessResponse<PieChartResponse> = {
-    status: StatusCodes.OK,
-    success: true,
-    data: {
-      weeklyHours,
-      monthlyHours
-    }
-  }
+  return { weeklyHours, monthlyHours }
+}
 
-  res.status(StatusCodes.OK).json(successResponse)
-})
+const getBarChart = async (user_id: number) => {
+  const tasks = await fetchTasksByUserId(user_id, "weekly")
+
+  const { series, option } = getDailyWorkingHours(tasks);
+
+  return {
+    option,
+    series
+  }
+}

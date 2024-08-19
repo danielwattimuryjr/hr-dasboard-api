@@ -25,7 +25,7 @@ const getFullDate = (date: Date) => {
   return formattedDate;
 }
 
-export const getDailyWorkingHours = (tasks: Task[]) => {
+export const getDailyWorkingHours = (tasks: { start: Date, end: Date }[]) => {
   const dailyHours: { [key: string]: number } = {};
 
   tasks.forEach((task) => {

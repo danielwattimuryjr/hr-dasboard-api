@@ -33,10 +33,11 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
   const queryParams: any[] = []
   let limitQuery: string = '';
   let offsetQuery: string = '';
+  let searchStr: string | undefined = req.query.search;
 
-  if (req.query.search) {
+  if (searchStr) {
     whereClauses.push(`u::text ILIKE $${queryParams.length + 1} OR r::text ILIKE $${queryParams.length + 1}`)
-    queryParams.push(`%${req.query.search}%`)
+    queryParams.push(`%${searchStr}%`)
   }
   const limit = parseInt(req.query.limit as string, 10) || 10;
   const page = parseInt(req.query.page as string, 10) || 1;
@@ -50,7 +51,7 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
   const whereClause = whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : '';
 
   const queryString = `
-    SELECT u.id, u.email, u.full_name, u.username, r.role_name, r.display_name 
+    SELECT u.id, u.email, u.full_name, r.role_name AS role, r.display_name AS role_display_name
     FROM users u 
     LEFT JOIN roles r ON u.role_id = r.id 
     ${whereClause}
@@ -63,11 +64,16 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
     SELECT COUNT(*) AS total 
     FROM users u 
     LEFT JOIN roles r ON u.role_id = r.id 
+    ${whereClause}
+    
   `;
 
   const result = await query<Employee>(queryString, queryParams)
 
-  const countResult = await query<{ total: number }>(countQueryString, []);
+  console.log(queryParams);
+
+
+  const countResult = await query<{ total: number }>(countQueryString, searchStr ? [queryParams[0]] : []);
 
   const totalRecords = parseInt(countResult?.rows[0]?.total || 0);
   const totalPages = Math.ceil(totalRecords / limit);
@@ -77,7 +83,9 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
     totalItems: number;
     employees: Employee[] | undefined;
     totalPages: number;
-    currentPage: number
+    currentPage: number;
+    limit?: number;
+    search?: string;
   }> = {
     status: StatusCodes.OK,
     success: true,
@@ -85,7 +93,9 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
       totalItems: totalRecords,
       employees: result?.rows,
       totalPages: totalPages,
-      currentPage: currentPage
+      currentPage: currentPage,
+      limit,
+      search: searchStr
     }
   };
 
