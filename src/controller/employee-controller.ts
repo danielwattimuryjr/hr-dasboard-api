@@ -70,9 +70,6 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
 
   const result = await query<Employee>(queryString, queryParams)
 
-  console.log(queryParams);
-
-
   const countResult = await query<{ total: number }>(countQueryString, searchStr ? [queryParams[0]] : []);
 
   const totalRecords = parseInt(countResult?.rows[0]?.total || 0);
@@ -85,7 +82,7 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
     totalPages: number;
     currentPage: number;
     limit?: number;
-    search?: string;
+    search?: string | null;
   }> = {
     status: StatusCodes.OK,
     success: true,
@@ -95,7 +92,7 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
       totalPages: totalPages,
       currentPage: currentPage,
       limit,
-      search: searchStr
+      search: searchStr || null
     }
   };
 

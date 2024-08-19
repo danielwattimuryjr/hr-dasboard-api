@@ -499,7 +499,6 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
     
   `;
   const result = yield query(queryString, queryParams);
-  console.log(queryParams);
   const countResult = yield query(countQueryString, searchStr ? [queryParams[0]] : []);
   const totalRecords = parseInt(((_a = countResult == null ? void 0 : countResult.rows[0]) == null ? void 0 : _a.total) || 0);
   const totalPages = Math.ceil(totalRecords / limit);
@@ -513,7 +512,7 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
       totalPages,
       currentPage,
       limit,
-      search: searchStr
+      search: searchStr || null
     }
   };
   res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);

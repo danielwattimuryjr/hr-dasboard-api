@@ -242,7 +242,9 @@
       }
     ],
     "totalPages": 6,
-    "currentPage": 1
+    "currentPage": 1,
+    "limit": 10,
+    "search": "user"
   }
 }
 ```
