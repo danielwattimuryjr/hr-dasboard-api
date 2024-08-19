@@ -470,9 +470,10 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
   const queryParams = [];
   let limitQuery = "";
   let offsetQuery = "";
-  if (req.query.search) {
+  let searchStr = req.query.search;
+  if (searchStr) {
     whereClauses.push(`u::text ILIKE $${queryParams.length + 1} OR r::text ILIKE $${queryParams.length + 1}`);
-    queryParams.push(`%${req.query.search}%`);
+    queryParams.push(`%${searchStr}%`);
   }
   const limit = parseInt(req.query.limit, 10) || 10;
   const page = parseInt(req.query.page, 10) || 1;
@@ -482,7 +483,7 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
   queryParams.push((page - 1) * limit);
   const whereClause = whereClauses.length > 0 ? " WHERE " + whereClauses.join(" AND ") : "";
   const queryString = `
-    SELECT u.id, u.email, u.full_name, u.username, r.role_name, r.display_name 
+    SELECT u.id, u.email, u.full_name, r.role_name AS role, r.display_name AS role_display_name
     FROM users u 
     LEFT JOIN roles r ON u.role_id = r.id 
     ${whereClause}
@@ -494,9 +495,12 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
     SELECT COUNT(*) AS total 
     FROM users u 
     LEFT JOIN roles r ON u.role_id = r.id 
+    ${whereClause}
+    
   `;
   const result = yield query(queryString, queryParams);
-  const countResult = yield query(countQueryString, []);
+  console.log(queryParams);
+  const countResult = yield query(countQueryString, searchStr ? [queryParams[0]] : []);
   const totalRecords = parseInt(((_a = countResult == null ? void 0 : countResult.rows[0]) == null ? void 0 : _a.total) || 0);
   const totalPages = Math.ceil(totalRecords / limit);
   const currentPage = page;
@@ -507,7 +511,9 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
       totalItems: totalRecords,
       employees: result == null ? void 0 : result.rows,
       totalPages,
-      currentPage
+      currentPage,
+      limit,
+      search: searchStr
     }
   };
   res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
@@ -778,24 +784,37 @@ var import_express3 = __toESM(require("express"));
 
 // src/controller/chart-controller.ts
 var import_http_status_codes4 = require("http-status-codes");
-var getBarChartData = asyncHandler((req, res) => __async(void 0, null, function* () {
+var getChartData = asyncHandler((req, res) => __async(void 0, null, function* () {
   const user_id = 1;
-  const tasks = yield fetchTasksByUserId(user_id, "weekly");
-  const { series, option } = getDailyWorkingHours(tasks);
+  const model = req.params.model;
+  let responseData;
+  switch (model) {
+    case "bar":
+      responseData = yield getBarChart(user_id);
+      break;
+    case "pie":
+      responseData = yield getPieChart(user_id);
+      break;
+    default:
+      const errorResponse = {
+        status: import_http_status_codes4.StatusCodes.BAD_REQUEST,
+        message: "Invalid chart model"
+      };
+      res.status(import_http_status_codes4.StatusCodes.BAD_REQUEST).json(errorResponse);
+      return;
+  }
   const successResponse = {
     status: import_http_status_codes4.StatusCodes.OK,
     success: true,
-    data: {
-      option,
-      series
-    }
+    data: responseData
   };
   res.status(import_http_status_codes4.StatusCodes.OK).json(successResponse);
 }));
-var getPieChartData = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = 1;
-  const monthlyTasks = yield fetchTasksByUserId(user_id, "monthly");
-  const weeklyTasks = yield fetchTasksByUserId(user_id, "weekly");
+var getPieChart = (user_id) => __async(void 0, null, function* () {
+  const [monthlyTasks, weeklyTasks] = yield Promise.all([
+    fetchTasksByUserId(user_id, "monthly"),
+    fetchTasksByUserId(user_id, "weekly")
+  ]);
   const { series: monthlySeries } = getDailyWorkingHours(monthlyTasks);
   const { series: weeklySeries } = getDailyWorkingHours(weeklyTasks);
   const weeklyHours = weeklySeries.reduce((series, val) => {
@@ -804,21 +823,20 @@ var getPieChartData = asyncHandler((req, res) => __async(void 0, null, function*
   const monthlyHours = monthlySeries.reduce((series, val) => {
     return series + val;
   }, 0);
-  const successResponse = {
-    status: import_http_status_codes4.StatusCodes.OK,
-    success: true,
-    data: {
-      weeklyHours,
-      monthlyHours
-    }
+  return { weeklyHours, monthlyHours };
+});
+var getBarChart = (user_id) => __async(void 0, null, function* () {
+  const tasks = yield fetchTasksByUserId(user_id, "weekly");
+  const { series, option } = getDailyWorkingHours(tasks);
+  return {
+    option,
+    series
   };
-  res.status(import_http_status_codes4.StatusCodes.OK).json(successResponse);
-}));
+});
 
 // src/route/chart-route.ts
 var route3 = import_express3.default.Router();
-route3.get("/bar", getBarChartData);
-route3.get("/pie", getPieChartData);
+route3.get("/:model", getChartData);
 var chart_route_default = route3;
 
 // src/route/auth-route.ts
