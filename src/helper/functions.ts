@@ -25,7 +25,7 @@ const getFullDate = (date: Date) => {
   return formattedDate;
 }
 
-export const getDailyWorkingHours = (tasks: { start: Date, end: Date }[]) => {
+export const getDailyWorkingHours = (tasks:Task[]) => {
   const dailyHours: { [key: string]: number } = {};
 
   tasks.forEach((task) => {
@@ -43,7 +43,6 @@ export const getDailyWorkingHours = (tasks: { start: Date, end: Date }[]) => {
 }
 
 export const fetchTasksByUserId = async (userId: number, period: Period = null) => {
-  // let taskResult;
   let filterByPeriodStr: string = ''
 
   switch (period) {
@@ -58,15 +57,12 @@ export const fetchTasksByUserId = async (userId: number, period: Period = null) 
   }
 
   const queryStr = `
-    SELECT start, "end" FROM tasks 
+    SELECT * FROM tasks 
     WHERE user_id=$1 
     ${filterByPeriodStr}
     ORDER BY start, "end" ASC`
 
-  const taskResult = await query<{
-    start: Date;
-    end: Date;
-  }>(queryStr, [userId]);
+  const taskResult = await query<Task[]>(queryStr, [userId]);
 
   return taskResult?.rows ?? [];
 };

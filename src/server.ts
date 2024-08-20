@@ -6,13 +6,13 @@ import employeeRouter from "./route/employee-route";
 import taskRouter from "./route/task-route";
 import chartRouter from "./route/chart-route";
 import authRouter from "./route/auth-route";
+import absenceRoute from "./route/absence-route";
 import cors from "cors"
 import helmet from "helmet";
 import db from "./libs/pg"
 import { notFoundHandler } from "./error/not-found";
 import { errorHandler } from "./error/error";
 import { verifyToken } from './middleware/token-middleware';
-import fileUpload from 'express-fileupload';
 import cookieParser from 'cookie-parser';
 
 const asyncHandler = async () => {
@@ -23,12 +23,7 @@ const asyncHandler = async () => {
   app.use(cookieParser())
   app.use(helmet());
   app.use(cors());
-  app.use(fileUpload({
-    limits: {
-      fileSize: 10000000,
-    },
-    abortOnLimit: true,
-  }))
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }))
 
@@ -38,6 +33,7 @@ const asyncHandler = async () => {
   app.use('/api/employees/', employeeRouter)
   app.use('/api/tasks/', taskRouter)
   app.use('/api/charts/', chartRouter)
+  app.use('/api/absences/', absenceRoute)
 
   app.use(notFoundHandler);
   app.use(errorHandler);

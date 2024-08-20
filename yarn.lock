@@ -454,15 +454,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/busboy@npm:*":
-  version: 1.5.4
-  resolution: "@types/busboy@npm:1.5.4"
-  dependencies:
-    "@types/node": "npm:*"
-  checksum: 10c0/0bdd209069a445d5a71277e558978ec0db1b1a3d108335da96477d017177ae349c4d81d604db0bea19e3c99c10af2d60dbac20e36cef7cb7a517e5a4760738bd
-  languageName: node
-  linkType: hard
-
 "@types/connect@npm:*":
   version: 3.4.38
   resolution: "@types/connect@npm:3.4.38"
@@ -494,16 +485,6 @@ __metadata:
   version: 1.0.5
   resolution: "@types/estree@npm:1.0.5"
   checksum: 10c0/b3b0e334288ddb407c7b3357ca67dbee75ee22db242ca7c56fe27db4e1a31989cb8af48a84dd401deb787fe10cc6b2ab1ee82dc4783be87ededbe3d53c79c70d
-  languageName: node
-  linkType: hard
-
-"@types/express-fileupload@npm:^1":
-  version: 1.5.0
-  resolution: "@types/express-fileupload@npm:1.5.0"
-  dependencies:
-    "@types/busboy": "npm:*"
-    "@types/express": "npm:*"
-  checksum: 10c0/0f6075d04ea111ad4a49b43d0fd43b44aac67793175547347a7bfff53d9a53830d519d39585b5a530a6feee06086f1b51898c0a3bfd96ce703f7ebb923d025c5
   languageName: node
   linkType: hard
 
@@ -798,15 +779,6 @@ __metadata:
   peerDependencies:
     esbuild: ">=0.18"
   checksum: 10c0/92c46df02586e0ebd66ee4831c9b5775adb3c32a43fe2b2aaf7bc675135c141f751de6a9a26b146d64c607c5b40f9eef5f10dce3c364f602d4bed268444c32c6
-  languageName: node
-  linkType: hard
-
-"busboy@npm:^1.6.0":
-  version: 1.6.0
-  resolution: "busboy@npm:1.6.0"
-  dependencies:
-    streamsearch: "npm:^1.1.0"
-  checksum: 10c0/fa7e836a2b82699b6e074393428b91ae579d4f9e21f5ac468e1b459a244341d722d2d22d10920cdd849743dbece6dca11d72de939fb75a7448825cf2babfba1f
   languageName: node
   linkType: hard
 
@@ -1265,15 +1237,6 @@ __metadata:
   version: 3.1.1
   resolution: "exponential-backoff@npm:3.1.1"
   checksum: 10c0/160456d2d647e6019640bd07111634d8c353038d9fa40176afb7cd49b0548bdae83b56d05e907c2cce2300b81cae35d800ef92fefb9d0208e190fa3b7d6bb579
-  languageName: node
-  linkType: hard
-
-"express-fileupload@npm:^1.5.1":
-  version: 1.5.1
-  resolution: "express-fileupload@npm:1.5.1"
-  dependencies:
-    busboy: "npm:^1.6.0"
-  checksum: 10c0/6d2cae43958bd6bc7710a45ce71dfd1bb378611ea99c7c81aaa45655eff837ce969af8062b9c882ed05bbf179b4185b01b2d53f41ce5c242f7eac59cf280b1d1
   languageName: node
   linkType: hard
 
@@ -2841,13 +2804,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"streamsearch@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "streamsearch@npm:1.1.0"
-  checksum: 10c0/fbd9aecc2621364384d157f7e59426f4bfd385e8b424b5aaa79c83a6f5a1c8fd2e4e3289e95de1eb3511cb96bb333d6281a9919fafce760e4edb35b2cd2facab
-  languageName: node
-  linkType: hard
-
 "string-width-cjs@npm:string-width@^4.2.0, string-width@npm:^4.1.0":
   version: 4.2.3
   resolution: "string-width@npm:4.2.3"
@@ -3031,7 +2987,6 @@ __metadata:
     "@types/cookie-parser": "npm:^1"
     "@types/cors": "npm:^2"
     "@types/express": "npm:^4.17.21"
-    "@types/express-fileupload": "npm:^1"
     "@types/jsonwebtoken": "npm:^9.0.6"
     "@types/node": "npm:^22.0.0"
     "@types/pg": "npm:^8.11.6"
@@ -3039,7 +2994,6 @@ __metadata:
     cors: "npm:^2.8.5"
     dotenv: "npm:^16.4.5"
     express: "npm:^4.19.2"
-    express-fileupload: "npm:^1.5.1"
     helmet: "npm:^7.1.0"
     http-status-codes: "npm:^2.3.0"
     jsonwebtoken: "npm:^9.0.2"

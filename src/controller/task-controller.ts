@@ -14,12 +14,9 @@ type Task = {
   project: string;
 }
 
-
-interface TaskRequest extends Request {
-  body: {
-    data?: Task[];
-  }
-}
+type TaskRequest = Request<undefined, SuccessResponse<Task[]>, {
+  data: Task[]
+}, null>
 
 // @desc  Save a new task
 // @route POST /api/tasks/

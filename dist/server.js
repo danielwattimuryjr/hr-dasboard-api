@@ -399,7 +399,7 @@ var require_lib = __commonJS({
 
 // src/server.ts
 var import_config = require("dotenv/config");
-var import_express5 = __toESM(require("express"));
+var import_express6 = __toESM(require("express"));
 
 // src/route/employee-route.ts
 var import_express = __toESM(require("express"));
@@ -483,7 +483,7 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
   queryParams.push((page - 1) * limit);
   const whereClause = whereClauses.length > 0 ? " WHERE " + whereClauses.join(" AND ") : "";
   const queryString = `
-    SELECT u.id, u.email, u.full_name, r.role_name AS role, r.display_name AS role_display_name
+    SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role
     FROM users u 
     LEFT JOIN roles r ON u.role_id = r.id 
     ${whereClause}
@@ -500,7 +500,7 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
   `;
   const result = yield query(queryString, queryParams);
   const countResult = yield query(countQueryString, searchStr ? [queryParams[0]] : []);
-  const totalRecords = parseInt(((_a = countResult == null ? void 0 : countResult.rows[0]) == null ? void 0 : _a.total) || 0);
+  const totalRecords = Number(((_a = countResult == null ? void 0 : countResult.rows[0]) == null ? void 0 : _a.total) || 0);
   const totalPages = Math.ceil(totalRecords / limit);
   const currentPage = page;
   const successResponse = {
@@ -508,22 +508,23 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
     success: true,
     data: {
       totalItems: totalRecords,
-      employees: result == null ? void 0 : result.rows,
       totalPages,
       currentPage,
       limit,
-      search: searchStr || null
+      search: searchStr || null,
+      rowPerPages: [5, 10, 15],
+      employees: result == null ? void 0 : result.rows
     }
   };
   res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
 }));
 var getEmployeeById = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = req.params.user_id;
+  const user_id = Number(req.params.user_id);
   const result = yield query(
     `
-    SELECT u.id, u.email, u.full_name, u.username, r.role_name, r.display_name FROM users u
-    WHERE user_id=$1
+    SELECT u.*, r.display_name AS role FROM users u
     LEFT JOIN roles r ON u.role_id = r.id 
+    WHERE u.id=$1
     ORDER BY id ASC
     `,
     [user_id]
@@ -531,7 +532,7 @@ var getEmployeeById = asyncHandler((req, res) => __async(void 0, null, function*
   const successResponse = {
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
-    data: result ? result.rows : []
+    data: result ? result.rows.at(0) : []
   };
   res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
 }));
@@ -563,24 +564,16 @@ var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* 
   res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
 }));
 var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
-  var _a;
-  let user_id = Number(0);
+  let user_id = 0;
   if (req.params.user_id) {
-    user_id = parseInt(req.params.user_id);
+    user_id = Number(req.params.user_id);
   } else {
-    const user_id2 = 1;
+    user_id = 1;
   }
   const { email, full_name, username, password } = req.body;
-  const image = (_a = req.files) == null ? void 0 : _a.profile_pic;
-  let image_name = null;
-  if (image) {
-    if (!/^image/.test(image.mimetype)) throw new Error("Uploaded file is not an image");
-    image_name = image.name;
-    image.mv(__dirname + "/profile_pic/" + image_name);
-  }
   const result = yield query(
-    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4, profile_pic=$5 WHERE id=$6 RETURNING *`,
-    [email, full_name, username, password, image_name, user_id]
+    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4 WHERE id=$5 RETURNING *`,
+    [email, full_name, username, password, user_id]
   );
   const successResponse = {
     status: import_http_status_codes.StatusCodes.OK,
@@ -691,7 +684,7 @@ var fetchTasksByUserId = (userId, period = null) => __async(void 0, null, functi
       break;
   }
   const queryStr = `
-    SELECT start, "end" FROM tasks 
+    SELECT * FROM tasks 
     WHERE user_id=$1 
     ${filterByPeriodStr}
     ORDER BY start, "end" ASC`;
@@ -888,6 +881,39 @@ route4.post("/", login);
 route4.post("/logout", logout);
 var auth_route_default = route4;
 
+// src/route/absence-route.ts
+var import_express5 = __toESM(require("express"));
+
+// src/controller/absence-controller.ts
+var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const fetchAbsenceResult = yield query(
+    `SELECT
+        u.id AS user_id,
+        u.full_name AS name,
+        ARRAY_AGG(
+            JSON_BUILD_OBJECT(
+                'date', a.date,
+                'type', a.type
+            )
+        ) AS absences
+    FROM absences a
+    JOIN users u ON a.user_id = u.id
+    GROUP BY u.id, u.full_name
+    ORDER BY u.id;
+    `
+  );
+  res.json({
+    status: 200,
+    success: true,
+    data: (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || []
+  });
+}));
+
+// src/route/absence-route.ts
+var route5 = import_express5.default.Router();
+route5.get("/", getAbsenceData);
+var absence_route_default = route5;
+
 // src/server.ts
 var import_cors = __toESM(require_lib());
 var import_helmet = __toESM(require("helmet"));
@@ -914,29 +940,23 @@ var errorHandler = (error, req, res, next) => {
 };
 
 // src/server.ts
-var import_express_fileupload = __toESM(require("express-fileupload"));
 var import_cookie_parser = __toESM(require("cookie-parser"));
 require("dotenv").config();
 var asyncHandler2 = () => __async(exports, null, function* () {
   yield pg_default.connect();
-  const app = (0, import_express5.default)();
+  const app = (0, import_express6.default)();
   const PORT = process.env.PORT || 8080;
   app.use((0, import_cookie_parser.default)());
   app.use((0, import_helmet.default)());
   app.use((0, import_cors.default)());
-  app.use((0, import_express_fileupload.default)({
-    limits: {
-      fileSize: 1e7
-    },
-    abortOnLimit: true
-  }));
-  app.use(import_express5.default.json());
-  app.use(import_express5.default.urlencoded({ extended: true }));
-  app.use(import_express5.default.static("public"));
+  app.use(import_express6.default.json());
+  app.use(import_express6.default.urlencoded({ extended: true }));
+  app.use(import_express6.default.static("public"));
   app.use("/api/auth/", auth_route_default);
   app.use("/api/employees/", employee_route_default);
   app.use("/api/tasks/", task_route_default);
   app.use("/api/charts/", chart_route_default);
+  app.use("/api/absences/", absence_route_default);
   app.use(notFoundHandler);
   app.use(errorHandler);
   app.listen(

@@ -3,7 +3,6 @@ import { asyncHandler } from "../helper/async-helper";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
 import { ErrorResponse, SuccessResponse } from "../types";
-import fileUpload from "express-fileupload";
 
 type Employee = {
   id?: number;
@@ -14,7 +13,9 @@ type Employee = {
   display_name: string;
 }
 
-type EmployeeRequest = Request<undefined, SuccessResponse<Employee[]>, {
+type EmployeeRequest = Request<{
+  user_id: number;
+}, SuccessResponse<Employee[]>, {
   email: string,
   full_name: string,
   username: string,
@@ -51,7 +52,7 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
   const whereClause = whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : '';
 
   const queryString = `
-    SELECT u.id, u.email, u.full_name, r.role_name AS role, r.display_name AS role_display_name
+    SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role
     FROM users u 
     LEFT JOIN roles r ON u.role_id = r.id 
     ${whereClause}
@@ -72,7 +73,7 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
 
   const countResult = await query<{ total: number }>(countQueryString, searchStr ? [queryParams[0]] : []);
 
-  const totalRecords = parseInt(countResult?.rows[0]?.total || 0);
+  const totalRecords = Number(countResult?.rows[0]?.total || 0);
   const totalPages = Math.ceil(totalRecords / limit);
   const currentPage = page;
 
@@ -83,16 +84,18 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
     currentPage: number;
     limit?: number;
     search?: string | null;
+    rowPerPages: number[];
   }> = {
     status: StatusCodes.OK,
     success: true,
     data: {
       totalItems: totalRecords,
-      employees: result?.rows,
       totalPages: totalPages,
       currentPage: currentPage,
       limit,
-      search: searchStr || null
+      search: searchStr || null,
+      rowPerPages: [5, 10, 15],
+      employees: result?.rows,
     }
   };
 
@@ -102,22 +105,22 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
 // @desc  Get user by id
 // @route GET /api/employees:user_id
 export const getEmployeeById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const user_id = req.params.user_id;
+  const user_id = Number(req.params.user_id);
 
   const result = await query<Employee>(
     `
-    SELECT u.id, u.email, u.full_name, u.username, r.role_name, r.display_name FROM users u
-    WHERE user_id=$1
+    SELECT u.*, r.display_name AS role FROM users u
     LEFT JOIN roles r ON u.role_id = r.id 
+    WHERE u.id=$1
     ORDER BY id ASC
     `,
     [user_id]
   )
 
-  const successResponse: SuccessResponse<Employee[]> = {
+  const successResponse: SuccessResponse<Employee | []> = {
     status: StatusCodes.OK,
     success: true,
-    data: result ? (result.rows) : [],
+    data: result ? (result.rows.at(0)) : [],
   };
 
   res.status(StatusCodes.OK).json(successResponse);
@@ -144,7 +147,7 @@ export const deleteEmployee = asyncHandler(async (req: Request, res: Response): 
 
 // @desc Create a user
 // @route POST /api/employees
-export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: Response): Promise<void> => {
+export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: Response) => {
   const { email, full_name, username, password, role_id } = req.body
 
   const result = await query(
@@ -165,30 +168,20 @@ export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: Res
 // @desc Update Current User Profile
 // @route PUT /api/employees
 export const updateProfile = asyncHandler(async (req: EmployeeRequest, res: Response) => {
-  let user_id = Number(0)
+  let user_id: number = 0;
 
   if (req.params.user_id) {
-    user_id = parseInt(req.params.user_id)
+    user_id = Number(req.params.user_id);
   } else {
     // const user_id = req.user.id;
-    const user_id = 1;
+    user_id = 1;
   }
 
   const { email, full_name, username, password } = req.body;
 
-  const image = req.files?.profile_pic
-  let image_name: string | null = null;
-
-  if (image) {
-    if (!/^image/.test(image.mimetype)) throw new Error("Uploaded file is not an image");
-
-    image_name = image.name
-    image.mv(__dirname + '/profile_pic/' + image_name)
-  }
-
   const result = await query<Employee>(
-    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4, profile_pic=$5 WHERE id=$6 RETURNING *`,
-    [email, full_name, username, password, image_name, user_id]
+    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4 WHERE id=$5 RETURNING *`,
+    [email, full_name, username, password, user_id]
   )
 
   const successResponse: SuccessResponse<Employee> = {

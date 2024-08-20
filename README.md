@@ -244,7 +244,7 @@
     "totalPages": 6,
     "currentPage": 1,
     "limit": 10,
-    "search": null 
+    "search": null
   }
 }
 ```
@@ -332,6 +332,204 @@
   "status": 200,
   "success": true,
   "message": "User with id 47 has been deleted"
+}
+```
+
+</details>
+
+#### Employees
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/absences</b></code> <code>(Get absences data, grouped per user)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": [
+    {
+      "user_id": 126,
+      "full_name": "User One",
+      "absences": [
+        {
+          "date": "2024-08-01T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-02T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-03T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 127,
+      "full_name": "User Two",
+      "absences": [
+        {
+          "date": "2024-08-04T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-05T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-06T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 128,
+      "full_name": "User Three",
+      "absences": [
+        {
+          "date": "2024-08-07T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-08T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-09T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 129,
+      "full_name": "User Four",
+      "absences": [
+        {
+          "date": "2024-08-10T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-11T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-12T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 130,
+      "full_name": "User Five",
+      "absences": [
+        {
+          "date": "2024-08-13T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-14T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-15T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 131,
+      "full_name": "User Six",
+      "absences": [
+        {
+          "date": "2024-08-16T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-17T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-18T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 132,
+      "full_name": "User Seven",
+      "absences": [
+        {
+          "date": "2024-08-19T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-20T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-21T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 133,
+      "full_name": "User Eight",
+      "absences": [
+        {
+          "date": "2024-08-22T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-23T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-24T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 134,
+      "full_name": "User Nine",
+      "absences": [
+        {
+          "date": "2024-08-25T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-26T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-27T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    },
+    {
+      "user_id": 135,
+      "full_name": "User Ten",
+      "absences": [
+        {
+          "date": "2024-08-28T08:00:00",
+          "type": "AL"
+        },
+        {
+          "date": "2024-08-29T08:00:00",
+          "type": "SL"
+        },
+        {
+          "date": "2024-08-30T08:00:00",
+          "type": "WFH"
+        }
+      ]
+    }
+  ]
 }
 ```
 
