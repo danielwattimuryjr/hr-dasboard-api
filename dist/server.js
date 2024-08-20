@@ -885,6 +885,7 @@ var auth_route_default = route4;
 var import_express5 = __toESM(require("express"));
 
 // src/controller/absence-controller.ts
+var import_http_status_codes6 = require("http-status-codes");
 var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
   const fetchAbsenceResult = yield query(
     `SELECT
@@ -903,15 +904,29 @@ var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* 
     `
   );
   res.json({
-    status: 200,
+    status: import_http_status_codes6.StatusCodes.OK,
     success: true,
     data: (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || []
+  });
+}));
+var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const { user_id, date, type } = req.body;
+  const saveAbsenceResult = yield query(
+    `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
+    [Number(user_id), date, type]
+  );
+  res.json({
+    status: import_http_status_codes6.StatusCodes.CREATED,
+    success: true,
+    message: "Absence data has been created successfully",
+    data: saveAbsenceResult == null ? void 0 : saveAbsenceResult.rows.at(0)
   });
 }));
 
 // src/route/absence-route.ts
 var route5 = import_express5.default.Router();
 route5.get("/", getAbsenceData);
+route5.post("/", createNewAbsence);
 var absence_route_default = route5;
 
 // src/server.ts
@@ -919,24 +934,24 @@ var import_cors = __toESM(require_lib());
 var import_helmet = __toESM(require("helmet"));
 
 // src/error/not-found.ts
-var import_http_status_codes6 = require("http-status-codes");
+var import_http_status_codes7 = require("http-status-codes");
 var notFoundHandler = (req, res) => {
   const response = {
-    status: import_http_status_codes6.StatusCodes.NOT_FOUND,
+    status: import_http_status_codes7.StatusCodes.NOT_FOUND,
     message: `Not found: ${req.originalUrl}`
   };
   res.status(404).json(response);
 };
 
 // src/error/error.ts
-var import_http_status_codes7 = require("http-status-codes");
+var import_http_status_codes8 = require("http-status-codes");
 var errorHandler = (error, req, res, next) => {
   const response = {
-    status: import_http_status_codes7.StatusCodes.INTERNAL_SERVER_ERROR,
+    status: import_http_status_codes8.StatusCodes.INTERNAL_SERVER_ERROR,
     message: error.message
   };
   console.log(error);
-  return res.status(import_http_status_codes7.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
+  return res.status(import_http_status_codes8.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
 };
 
 // src/server.ts
