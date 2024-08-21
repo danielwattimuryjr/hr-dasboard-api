@@ -337,7 +337,7 @@
 
 </details>
 
-#### Employees
+#### Absence
 
 <details>
  <summary><code>GET</code> <code><b>192.168.18.30:3000/api/absences</b></code> <code>(Get absences data, grouped per user)</code></summary>
