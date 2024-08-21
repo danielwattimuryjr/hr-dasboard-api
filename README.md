@@ -351,7 +351,7 @@
   "data": [
     {
       "user_id": 126,
-      "full_name": "User One",
+      "name": "User One",
       "absences": [
         {
           "date": "2024-08-01T08:00:00",
@@ -369,7 +369,7 @@
     },
     {
       "user_id": 127,
-      "full_name": "User Two",
+      "name": "User Two",
       "absences": [
         {
           "date": "2024-08-04T08:00:00",
@@ -387,7 +387,7 @@
     },
     {
       "user_id": 128,
-      "full_name": "User Three",
+      "name": "User Three",
       "absences": [
         {
           "date": "2024-08-07T08:00:00",
@@ -405,7 +405,7 @@
     },
     {
       "user_id": 129,
-      "full_name": "User Four",
+      "name": "User Four",
       "absences": [
         {
           "date": "2024-08-10T08:00:00",
@@ -423,7 +423,7 @@
     },
     {
       "user_id": 130,
-      "full_name": "User Five",
+      "name": "User Five",
       "absences": [
         {
           "date": "2024-08-13T08:00:00",
@@ -441,7 +441,7 @@
     },
     {
       "user_id": 131,
-      "full_name": "User Six",
+      "name": "User Six",
       "absences": [
         {
           "date": "2024-08-16T08:00:00",
@@ -459,7 +459,7 @@
     },
     {
       "user_id": 132,
-      "full_name": "User Seven",
+      "name": "User Seven",
       "absences": [
         {
           "date": "2024-08-19T08:00:00",
@@ -477,7 +477,7 @@
     },
     {
       "user_id": 133,
-      "full_name": "User Eight",
+      "name": "User Eight",
       "absences": [
         {
           "date": "2024-08-22T08:00:00",
@@ -495,7 +495,7 @@
     },
     {
       "user_id": 134,
-      "full_name": "User Nine",
+      "name": "User Nine",
       "absences": [
         {
           "date": "2024-08-25T08:00:00",
@@ -513,7 +513,7 @@
     },
     {
       "user_id": 135,
-      "full_name": "User Ten",
+      "name": "User Ten",
       "absences": [
         {
           "date": "2024-08-28T08:00:00",
@@ -530,6 +530,37 @@
       ]
     }
   ]
+}
+```
+
+</details>
+
+<details>
+ <summary><code>POST</code> <code><b>192.168.18.30:3000/api/absences</b></code> <code>(Add new absences data for an employee)</code></summary>
+
+##### Request
+
+```json
+{
+  "user_id": 126,
+  "date": "2024-08-10T08:00:00Z",
+  "type": "AL"
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 201,
+  "success": true,
+  "message": "Absence data has been created successfully",
+  "data": {
+    "id": 94,
+    "user_id": 126,
+    "date": "2024-08-10T00:00:00.000Z",
+    "type": "AL"
+  }
 }
 ```
 
