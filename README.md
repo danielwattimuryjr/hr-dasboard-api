@@ -565,3 +565,128 @@
 ```
 
 </details>
+
+#### Projects
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/projects</b></code> <code>(Get all projects)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "project_name": "Project A",
+      "description": "Project A Desc"
+    },
+    {
+      "id": 2,
+      "project_name": "Project B",
+      "description": "Project B Desc"
+    },
+    {
+      "id": 3,
+      "project_name": "Project C",
+      "description": "Project C Desc"
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/projects/{project_id}</b></code> <code>(Get a single project by it's ID)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": {
+    "id": 1,
+    "project_name": "Project A",
+    "description": "Project A Desc"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>POST</code> <code><b>192.168.18.30:3000/api/projects/</b></code> <code>(Create a single project)</code></summary>
+
+##### Request
+
+```json
+{
+  "project_name": "Project A",
+  "description": "Project A Desc"
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 201,
+  "success": true,
+  "message": "New project successfully created",
+  "data": {
+    "id": 1,
+    "project_name": "Project A",
+    "description": "Project A Desc"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>PUT</code> <code><b>192.168.18.30:3000/api/projects/{project_id}</b></code> <code>(Update a single project)</code></summary>
+
+##### Request
+
+```json
+{
+  "project_name": "Project A Updated",
+  "description": "Project A Updated"
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Project with ID 1 has been updated",
+  "data": {
+    "id": 1,
+    "project_name": "Project A Updated",
+    "description": "Project A Updated"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>DELETE</code> <code><b>192.168.18.30:3000/api/projects/{project_id}</b></code> <code>(Delete a single project)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Project with ID 3 has been deleted"
+}
+```
+
+</details>

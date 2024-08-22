@@ -14,16 +14,16 @@ type Task = {
   project: string;
 }
 
-type TaskRequest = Request<undefined, SuccessResponse<Task[]>, {
+type TaskRequest = Request<{}, SuccessResponse<Task[]>, {
   data: Task[]
-}, null>
+}>
 
 // @desc  Save a new task
 // @route POST /api/tasks/
 export const saveTask = asyncHandler(async (req: TaskRequest, res: Response) => {
   const tasks = req.body.data;
   // const user_id = req.user.id;
-  const user_id = 1;
+  const user_id = 126;
 
   try {
     await query("BEGIN")
@@ -70,11 +70,11 @@ export const saveTask = asyncHandler(async (req: TaskRequest, res: Response) => 
 // @route GET /api/tasks/
 export const getTaskByUserId = asyncHandler(async (req: TaskRequest, res: Response) => {
   // const user_id = req.user.id;
-  const user_id = 1
+  const user_id = 126
 
   const task_result = await fetchTasksByUserId(user_id);
 
-  const successResponse: SuccessResponse<Task[]> = {
+  const successResponse: SuccessResponse<any> = {
     status: StatusCodes.OK,
     success: true,
     data: task_result

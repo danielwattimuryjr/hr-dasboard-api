@@ -14,14 +14,14 @@ type User = {
   display_name: string;
 }
 
-interface LoginRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-  }
-}
+type LoginRequest = Request<{}, any, {
+  email?: string;
+  password?: string;
+}>
+type LoginResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 
-export const login = asyncHandler(async (req: LoginRequest, res: Response) => {
+
+export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<string>) => {
   const { email, password } = req.body;
 
   const result = await query<User>(
@@ -32,7 +32,7 @@ export const login = asyncHandler(async (req: LoginRequest, res: Response) => {
     [email, password]
   )
 
-  if (result?.rowCount < 1) {
+  if (result?.rowCount || 0 < 1) {
     const errorResponse: ErrorResponse = {
       status: StatusCodes.NOT_FOUND,
       message: "User with email or password specified, are not found"
@@ -44,28 +44,24 @@ export const login = asyncHandler(async (req: LoginRequest, res: Response) => {
 
   const token = jwt.sign({ user }, 'test', { expiresIn: '1h' })
 
-  const successResponse: SuccessResponse<any> = {
+  res.cookie("access_token", `${token}`, {
+    httpOnly: true,
+    secure: false
+  }).status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
     message: "Login Successfull",
     data: token
-  }
-
-  res.cookie("access_token", `${token}`, {
-    httpOnly: true,
-    secure: false
-  }).status(StatusCodes.OK).json(successResponse);
+  });
 })
 
-export const logout = (req: Request, res: Response) => {
-  const successResponse: SuccessResponse<any> = {
-    status: StatusCodes.OK,
-    success: true,
-    message: "Logout Successfull",
-  }
-
+export const logout = (req: LoginRequest, res: LoginResponse<undefined>) => {
   return res
     .clearCookie("access_token")
     .status(StatusCodes.OK)
-    .json(successResponse);
+    .json({
+      status: StatusCodes.OK,
+      success: true,
+      message: "Logout Successfull",
+    });
 };

@@ -399,7 +399,7 @@ var require_lib = __commonJS({
 
 // src/server.ts
 var import_config = require("dotenv/config");
-var import_express6 = __toESM(require("express"));
+var import_express7 = __toESM(require("express"));
 
 // src/route/employee-route.ts
 var import_express = __toESM(require("express"));
@@ -503,7 +503,7 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
   const totalRecords = Number(((_a = countResult == null ? void 0 : countResult.rows[0]) == null ? void 0 : _a.total) || 0);
   const totalPages = Math.ceil(totalRecords / limit);
   const currentPage = page;
-  const successResponse = {
+  res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
     data: {
@@ -515,8 +515,7 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
       rowPerPages: [5, 10, 15],
       employees: result == null ? void 0 : result.rows
     }
-  };
-  res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
+  });
 }));
 var getEmployeeById = asyncHandler((req, res) => __async(void 0, null, function* () {
   const user_id = Number(req.params.user_id);
@@ -529,12 +528,11 @@ var getEmployeeById = asyncHandler((req, res) => __async(void 0, null, function*
     `,
     [user_id]
   );
-  const successResponse = {
+  res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
-    data: result ? result.rows.at(0) : []
-  };
-  res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
+    data: result == null ? void 0 : result.rows.at(0)
+  });
 }));
 var deleteEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
   const user_id = parseInt(req.params.user_id);
@@ -542,12 +540,11 @@ var deleteEmployee = asyncHandler((req, res) => __async(void 0, null, function* 
     `DELETE FROM users WHERE id=$1`,
     [user_id]
   );
-  const successResponse = {
+  res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
     message: `User with id ${user_id} has been deleted`
-  };
-  res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
+  });
 }));
 var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
   const { email, full_name, username, password, role_id } = req.body;
@@ -555,13 +552,12 @@ var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* 
     `INSERT INTO public."users" (email, full_name, username, password, role_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
     [email, full_name, username, password, role_id]
   );
-  const successResponse = {
+  res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.CREATED,
     success: true,
     message: `User is created successfully`,
     data: result == null ? void 0 : result.rows.at(0)
-  };
-  res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
+  });
 }));
 var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
   let user_id = 0;
@@ -575,13 +571,12 @@ var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* (
     `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4 WHERE id=$5 RETURNING *`,
     [email, full_name, username, password, user_id]
   );
-  const successResponse = {
+  res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
     message: `User updated successfully`,
     data: result == null ? void 0 : result.rows.at(0)
-  };
-  res.status(import_http_status_codes.StatusCodes.OK).json(successResponse);
+  });
 }));
 
 // src/middleware/validation-middleware.ts
@@ -695,7 +690,7 @@ var fetchTasksByUserId = (userId, period = null) => __async(void 0, null, functi
 // src/controller/task-controller.ts
 var saveTask = asyncHandler((req, res) => __async(void 0, null, function* () {
   const tasks = req.body.data;
-  const user_id = 1;
+  const user_id = 126;
   try {
     yield query("BEGIN");
     const q = [];
@@ -729,7 +724,7 @@ var saveTask = asyncHandler((req, res) => __async(void 0, null, function* () {
   }
 }));
 var getTaskByUserId = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = 1;
+  const user_id = 126;
   const task_result = yield fetchTasksByUserId(user_id);
   const successResponse = {
     status: import_http_status_codes3.StatusCodes.OK,
@@ -777,7 +772,7 @@ var import_express3 = __toESM(require("express"));
 // src/controller/chart-controller.ts
 var import_http_status_codes4 = require("http-status-codes");
 var getChartData = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = 1;
+  const user_id = 126;
   const model = req.params.model;
   let responseData;
   switch (model) {
@@ -846,7 +841,7 @@ var login = asyncHandler((req, res) => __async(void 0, null, function* () {
    WHERE u.email=$1 AND u.password=$2`,
     [email, password]
   );
-  if ((result == null ? void 0 : result.rowCount) < 1) {
+  if ((result == null ? void 0 : result.rowCount) || 0 < 1) {
     const errorResponse = {
       status: import_http_status_codes5.StatusCodes.NOT_FOUND,
       message: "User with email or password specified, are not found"
@@ -855,24 +850,22 @@ var login = asyncHandler((req, res) => __async(void 0, null, function* () {
   }
   const user = result == null ? void 0 : result.rows.at(0);
   const token = import_jsonwebtoken.default.sign({ user }, "test", { expiresIn: "1h" });
-  const successResponse = {
+  res.cookie("access_token", `${token}`, {
+    httpOnly: true,
+    secure: false
+  }).status(import_http_status_codes5.StatusCodes.OK).json({
     status: import_http_status_codes5.StatusCodes.OK,
     success: true,
     message: "Login Successfull",
     data: token
-  };
-  res.cookie("access_token", `${token}`, {
-    httpOnly: true,
-    secure: false
-  }).status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
+  });
 }));
 var logout = (req, res) => {
-  const successResponse = {
+  return res.clearCookie("access_token").status(import_http_status_codes5.StatusCodes.OK).json({
     status: import_http_status_codes5.StatusCodes.OK,
     success: true,
     message: "Logout Successfull"
-  };
-  return res.clearCookie("access_token").status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
+  });
 };
 
 // src/route/auth-route.ts
@@ -903,7 +896,7 @@ var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* 
     ORDER BY u.id;
     `
   );
-  res.json({
+  res.status(200).json({
     status: import_http_status_codes6.StatusCodes.OK,
     success: true,
     data: (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || []
@@ -929,29 +922,122 @@ route5.get("/", getAbsenceData);
 route5.post("/", createNewAbsence);
 var absence_route_default = route5;
 
+// src/route/project-route.ts
+var import_express6 = __toESM(require("express"));
+
+// src/controller/project-controller.ts
+var import_http_status_codes7 = require("http-status-codes");
+var getAllProject = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const fetchProjectResult = yield query(
+    `SELECT * FROM projects ORDER BY project_name`
+  );
+  res.status(import_http_status_codes7.StatusCodes.OK).json({
+    status: import_http_status_codes7.StatusCodes.OK,
+    success: true,
+    data: (fetchProjectResult == null ? void 0 : fetchProjectResult.rows) || []
+  });
+}));
+var getProjectById = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const project_id = Number(req.params.project_id);
+  if (!project_id) {
+    const response = {
+      status: import_http_status_codes7.StatusCodes.BAD_REQUEST,
+      message: "Project ID not specified"
+    };
+    return res.status(import_http_status_codes7.StatusCodes.BAD_REQUEST).json(response);
+  }
+  const checkProjectExsistenceResult = yield query(
+    `SELECT * FROM projects WHERE id=$1`,
+    [project_id]
+  );
+  if ((checkProjectExsistenceResult == null ? void 0 : checkProjectExsistenceResult.rowCount) < 0) {
+    const response = {
+      status: import_http_status_codes7.StatusCodes.NOT_FOUND,
+      message: `Project with ID ${project_id} not found`
+    };
+    return res.status(import_http_status_codes7.StatusCodes.NOT_FOUND).json(response);
+  }
+  const fetchProjectResult = yield query(
+    `SELECT * FROM projects ORDER BY project_name`
+  );
+  res.status(import_http_status_codes7.StatusCodes.OK).json({
+    status: import_http_status_codes7.StatusCodes.OK,
+    success: true,
+    data: fetchProjectResult == null ? void 0 : fetchProjectResult.rows.at(0)
+  });
+}));
+var createNewProject = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const { description, project_name } = req.body;
+  const storeNewProjectResult = yield query(
+    `INSERT INTO projects (project_name, description) VALUES ($1, $2) RETURNING *`,
+    [project_name, description]
+  );
+  res.status(import_http_status_codes7.StatusCodes.CREATED).json({
+    status: import_http_status_codes7.StatusCodes.CREATED,
+    success: true,
+    message: `New project successfully created`,
+    data: storeNewProjectResult == null ? void 0 : storeNewProjectResult.rows.at(0)
+  });
+}));
+var updateProject = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const project_id = Number(req.params.project_id);
+  const { description, project_name } = req.body;
+  const updateProjectResult = yield query(
+    `UPDATE projects SET project_name=$1, description=$2 WHERE id=$3 RETURNING *`,
+    [project_name, description, project_id]
+  );
+  res.status(import_http_status_codes7.StatusCodes.OK).json({
+    status: import_http_status_codes7.StatusCodes.OK,
+    success: true,
+    message: `Project with ID ${project_id} has been updated`,
+    data: updateProjectResult == null ? void 0 : updateProjectResult.rows.at(0)
+  });
+}));
+var deleteProject = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const project_id = Number(req.params.project_id);
+  yield query(
+    `DELETE FROM projects WHERE id=$1`,
+    [project_id]
+  );
+  res.status(import_http_status_codes7.StatusCodes.OK).json({
+    status: import_http_status_codes7.StatusCodes.OK,
+    success: true,
+    message: `Project with ID ${project_id} has been deleted`
+  });
+}));
+
+// src/route/project-route.ts
+var route6 = import_express6.default.Router();
+route6.get("/", getAllProject);
+route6.get("/:project_id", getProjectById);
+route6.post("/", createNewProject);
+route6.put("/:project_id", updateProject);
+route6.delete("/:project_id", deleteProject);
+var project_route_default = route6;
+
 // src/server.ts
 var import_cors = __toESM(require_lib());
 var import_helmet = __toESM(require("helmet"));
 
 // src/error/not-found.ts
-var import_http_status_codes7 = require("http-status-codes");
+var import_http_status_codes8 = require("http-status-codes");
 var notFoundHandler = (req, res) => {
   const response = {
-    status: import_http_status_codes7.StatusCodes.NOT_FOUND,
+    status: import_http_status_codes8.StatusCodes.NOT_FOUND,
     message: `Not found: ${req.originalUrl}`
   };
   res.status(404).json(response);
 };
 
 // src/error/error.ts
-var import_http_status_codes8 = require("http-status-codes");
+var import_http_status_codes9 = require("http-status-codes");
 var errorHandler = (error, req, res, next) => {
   const response = {
-    status: import_http_status_codes8.StatusCodes.INTERNAL_SERVER_ERROR,
+    status: import_http_status_codes9.StatusCodes.INTERNAL_SERVER_ERROR,
     message: error.message
   };
   console.log(error);
-  return res.status(import_http_status_codes8.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
+  return res.status(import_http_status_codes9.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
 };
 
 // src/server.ts
@@ -959,19 +1045,20 @@ var import_cookie_parser = __toESM(require("cookie-parser"));
 require("dotenv").config();
 var asyncHandler2 = () => __async(exports, null, function* () {
   yield pg_default.connect();
-  const app = (0, import_express6.default)();
+  const app = (0, import_express7.default)();
   const PORT = process.env.PORT || 8080;
   app.use((0, import_cookie_parser.default)());
   app.use((0, import_helmet.default)());
   app.use((0, import_cors.default)());
-  app.use(import_express6.default.json());
-  app.use(import_express6.default.urlencoded({ extended: true }));
-  app.use(import_express6.default.static("public"));
+  app.use(import_express7.default.json());
+  app.use(import_express7.default.urlencoded({ extended: true }));
+  app.use(import_express7.default.static("public"));
   app.use("/api/auth/", auth_route_default);
   app.use("/api/employees/", employee_route_default);
   app.use("/api/tasks/", task_route_default);
   app.use("/api/charts/", chart_route_default);
   app.use("/api/absences/", absence_route_default);
+  app.use("/api/projects/", project_route_default);
   app.use(notFoundHandler);
   app.use(errorHandler);
   app.listen(

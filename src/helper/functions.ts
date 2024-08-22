@@ -25,7 +25,7 @@ const getFullDate = (date: Date) => {
   return formattedDate;
 }
 
-export const getDailyWorkingHours = (tasks:Task[]) => {
+export const getDailyWorkingHours = (tasks: Task[]) => {
   const dailyHours: { [key: string]: number } = {};
 
   tasks.forEach((task) => {
@@ -62,7 +62,7 @@ export const fetchTasksByUserId = async (userId: number, period: Period = null) 
     ${filterByPeriodStr}
     ORDER BY start, "end" ASC`
 
-  const taskResult = await query<Task[]>(queryStr, [userId]);
+  const taskResult = await query<Task>(queryStr, [userId]);
 
   return taskResult?.rows ?? [];
 };

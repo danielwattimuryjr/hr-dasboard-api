@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
-import { SuccessResponse } from "../types";
+import { ErrorResponse, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
 
@@ -9,15 +9,20 @@ type AbsenceItem = {
   name?: string;
   absences: {
     date: Date;
-    status: 'WFH' | 'AL' | 'SL';
+    type: 'WFH' | 'AL' | 'SL';
   }[]
 }
 
-type AbsenceResponse<T> = Response<SuccessResponse<T>>
+type AbsenceRequest = Request<{}, any, {
+  user_id: number;
+  date: Date;
+  type: 'WFH' | 'AL' | 'SL';
+}>
+type AbsenceResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 
 // @desc  Get all absence for all user
 // @route GET /api/absences
-export const getAbsenceData = asyncHandler(async (req: Request, res: AbsenceResponse<AbsenceItem[]>) => {
+const getAbsenceData = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<AbsenceItem[]>) => {
   const fetchAbsenceResult = await query<AbsenceItem>(
     `SELECT
         u.id AS user_id,
@@ -35,7 +40,7 @@ export const getAbsenceData = asyncHandler(async (req: Request, res: AbsenceResp
     `
   );
 
-  res.json({
+  res.status(200).json({
     status: StatusCodes.OK,
     success: true,
     data: fetchAbsenceResult?.rows || []
@@ -44,7 +49,7 @@ export const getAbsenceData = asyncHandler(async (req: Request, res: AbsenceResp
 
 // @desc  Add new absence data
 // @route POST /api/absences
-export const createNewAbsence = asyncHandler(async (req: Request, res: AbsenceResponse<AbsenceItem>) => {
+const createNewAbsence = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<AbsenceItem>) => {
   const { user_id, date, type } = req.body
 
   const saveAbsenceResult = await query(
@@ -59,3 +64,8 @@ export const createNewAbsence = asyncHandler(async (req: Request, res: AbsenceRe
     data: saveAbsenceResult?.rows.at(0)
   })
 })
+
+export {
+  getAbsenceData,
+  createNewAbsence
+}

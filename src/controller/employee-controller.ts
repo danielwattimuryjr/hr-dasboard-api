@@ -13,14 +13,13 @@ type Employee = {
   display_name: string;
 }
 
-type EmployeeRequest = Request<{
-  user_id: number;
-}, SuccessResponse<Employee[]>, {
+type EmployeeResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
+type EmployeeRequest = Request<{ user_id: number }, any, {
   email: string,
   full_name: string,
-  username: string,
-  password: string,
-  role_id: number,
+  username: string;
+  password: string;
+  role_id: number;
 }, {
   search: string;
   limit: string;
@@ -29,7 +28,15 @@ type EmployeeRequest = Request<{
 
 // @desc  Get all users
 // @route GET /api/employees
-export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Response): Promise<void> => {
+export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<{
+  totalItems: number;
+  employees: Employee[] | undefined;
+  totalPages: number;
+  currentPage: number;
+  limit?: number;
+  search?: string | null;
+  rowPerPages: number[];
+}>) => {
   const whereClauses: any[] = []
   const queryParams: any[] = []
   let limitQuery: string = '';
@@ -77,15 +84,7 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
   const totalPages = Math.ceil(totalRecords / limit);
   const currentPage = page;
 
-  const successResponse: SuccessResponse<{
-    totalItems: number;
-    employees: Employee[] | undefined;
-    totalPages: number;
-    currentPage: number;
-    limit?: number;
-    search?: string | null;
-    rowPerPages: number[];
-  }> = {
+  res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
     data: {
@@ -97,14 +96,12 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Re
       rowPerPages: [5, 10, 15],
       employees: result?.rows,
     }
-  };
-
-  res.status(StatusCodes.OK).json(successResponse);
+  });
 });
 
 // @desc  Get user by id
 // @route GET /api/employees:user_id
-export const getEmployeeById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+export const getEmployeeById = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
   const user_id = Number(req.params.user_id);
 
   const result = await query<Employee>(
@@ -117,18 +114,16 @@ export const getEmployeeById = asyncHandler(async (req: Request, res: Response):
     [user_id]
   )
 
-  const successResponse: SuccessResponse<Employee | []> = {
+  res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
-    data: result ? (result.rows.at(0)) : [],
-  };
-
-  res.status(StatusCodes.OK).json(successResponse);
+    data: result?.rows.at(0)
+  });
 });
 
 // @desc  Delete a user
 // @route DELETE /api/employees:user_id
-export const deleteEmployee = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+export const deleteEmployee = asyncHandler(async (req: Request, res: EmployeeResponse<null>) => {
   const user_id: number = parseInt(req.params.user_id)
 
   await query(
@@ -136,38 +131,34 @@ export const deleteEmployee = asyncHandler(async (req: Request, res: Response): 
     [user_id]
   )
 
-  const successResponse: SuccessResponse<Employee[]> = {
+  res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
     message: `User with id ${user_id} has been deleted`,
-  };
-
-  res.status(StatusCodes.OK).json(successResponse);
+  });
 })
 
 // @desc Create a user
 // @route POST /api/employees
-export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: Response) => {
+export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
   const { email, full_name, username, password, role_id } = req.body
 
-  const result = await query(
+  const result = await query<Employee>(
     `INSERT INTO public."users" (email, full_name, username, password, role_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
     [email, full_name, username, password, role_id]
   )
 
-  const successResponse: SuccessResponse<Employee> = {
+  res.status(StatusCodes.OK).json({
     status: StatusCodes.CREATED,
     success: true,
     message: `User is created successfully`,
     data: result?.rows.at(0)
-  };
-
-  res.status(StatusCodes.OK).json(successResponse);
+  });
 })
 
 // @desc Update Current User Profile
 // @route PUT /api/employees
-export const updateProfile = asyncHandler(async (req: EmployeeRequest, res: Response) => {
+export const updateProfile = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
   let user_id: number = 0;
 
   if (req.params.user_id) {
@@ -184,12 +175,10 @@ export const updateProfile = asyncHandler(async (req: EmployeeRequest, res: Resp
     [email, full_name, username, password, user_id]
   )
 
-  const successResponse: SuccessResponse<Employee> = {
+  res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
     message: `User updated successfully`,
     data: result?.rows.at(0)
-  };
-
-  res.status(StatusCodes.OK).json(successResponse);
+  });
 })

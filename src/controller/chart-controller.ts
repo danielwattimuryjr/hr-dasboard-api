@@ -17,7 +17,7 @@ type BarChartResponse = {
 // @desc  Get required data for the bar chart
 // @route GET /api/charts/:model
 export const getChartData = asyncHandler(async (req: Request, res: Response) => {
-  const user_id = 1;
+  const user_id = 126;
   const model: string = req.params.model;
 
   let responseData;
