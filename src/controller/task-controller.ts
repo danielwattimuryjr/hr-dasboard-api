@@ -11,7 +11,7 @@ type Task = {
   description: string;
   start: Date;
   end: Date;
-  project: string;
+  project_id: number;
 }
 
 type TaskRequest = Request<{}, SuccessResponse<Task[]>, {
@@ -34,14 +34,14 @@ export const saveTask = asyncHandler(async (req: TaskRequest, res: Response) => 
       const baseIndex = index * 5;
       q.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
 
-      params.push(`${task.project}`)
+      params.push(`${task.project_id}`)
       params.push(`${task.description}`)
       params.push(`${task.start}`)
       params.push(`${task.end}`)
       params.push(`${user_id}`)
     })
 
-    const queryStr = `INSERT INTO tasks (project, description, start, "end", user_id) VALUES ` + q.join(', ') + `RETURNING *`;
+    const queryStr = `INSERT INTO tasks (project_id, description, start, "end", user_id) VALUES ` + q.join(', ') + `RETURNING *`;
 
     const task_result = await query<Task>(queryStr, params)
     await query("COMMIT")

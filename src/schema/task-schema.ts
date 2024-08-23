@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const taskItemSchema = z.object({
-  project: z.string()
+  project_id: z.number()
     .min(1, { message: "Project name is required" }),
   description: z.string()
     .min(1, { message: "Description is required" }),

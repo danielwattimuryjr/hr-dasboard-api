@@ -49,13 +49,13 @@
 {
   "data": [
     {
-      "project": "Project A",
+      "project_id": 1,
       "description": "Deskripsi A",
       "start": "2024-08-02 17:00:00",
       "end": "2024-08-02 18:00:00"
     },
     {
-      "project": "Project B",
+      "project_id": 1,
       "description": "Deskripsi B",
       "start": "2024-08-03 07:00:00",
       "end": "2024-08-03 17:00:00"
@@ -70,25 +70,23 @@
 {
   "status": 201,
   "success": true,
-  "message": "Report created succesfully for user 1",
+  "message": "Report created succesfully for user 126",
   "data": [
     {
-      "id": 7,
-      "project": "Project A",
+      "id": 1,
       "description": "Deskripsi A",
-      "user_id": 1,
+      "user_id": 126,
       "start": "2024-08-02T09:00:00.000Z",
       "end": "2024-08-02T10:00:00.000Z",
-      "created_at": "2024-08-15T00:27:47.497Z"
+      "project_id": 1
     },
     {
-      "id": 8,
-      "project": "Project B",
+      "id": 2,
       "description": "Deskripsi B",
-      "user_id": 1,
+      "user_id": 126,
       "start": "2024-08-02T23:00:00.000Z",
       "end": "2024-08-03T09:00:00.000Z",
-      "created_at": "2024-08-15T00:27:47.497Z"
+      "project_id": 1
     }
   ]
 }

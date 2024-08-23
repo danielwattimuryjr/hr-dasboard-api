@@ -713,13 +713,13 @@ var saveTask = asyncHandler((req, res) => __async(void 0, null, function* () {
     tasks == null ? void 0 : tasks.forEach((task, index) => {
       const baseIndex = index * 5;
       q.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
-      params.push(`${task.project}`);
+      params.push(`${task.project_id}`);
       params.push(`${task.description}`);
       params.push(`${task.start}`);
       params.push(`${task.end}`);
       params.push(`${user_id}`);
     });
-    const queryStr = `INSERT INTO tasks (project, description, start, "end", user_id) VALUES ` + q.join(", ") + `RETURNING *`;
+    const queryStr = `INSERT INTO tasks (project_id, description, start, "end", user_id) VALUES ` + q.join(", ") + `RETURNING *`;
     const task_result = yield query(queryStr, params);
     yield query("COMMIT");
     const successResponse = {
@@ -765,7 +765,7 @@ var deleteTask = asyncHandler((req, res) => __async(void 0, null, function* () {
 // src/schema/task-schema.ts
 var import_zod3 = require("zod");
 var taskItemSchema = import_zod3.z.object({
-  project: import_zod3.z.string().min(1, { message: "Project name is required" }),
+  project_id: import_zod3.z.number().min(1, { message: "Project name is required" }),
   description: import_zod3.z.string().min(1, { message: "Description is required" }),
   start: import_zod3.z.string().min(1, { message: "Start time is required" }),
   end: import_zod3.z.string().min(1, { message: "End time is required" })
