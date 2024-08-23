@@ -580,18 +580,15 @@
   "data": [
     {
       "id": 1,
-      "project_name": "Project A",
-      "description": "Project A Desc"
+      "project_name": "Project A"
     },
     {
       "id": 2,
-      "project_name": "Project B",
-      "description": "Project B Desc"
+      "project_name": "Project B"
     },
     {
       "id": 3,
-      "project_name": "Project C",
-      "description": "Project C Desc"
+      "project_name": "Project C"
     }
   ]
 }
@@ -610,8 +607,7 @@
   "success": true,
   "data": {
     "id": 1,
-    "project_name": "Project A",
-    "description": "Project A Desc"
+    "project_name": "Project A"
   }
 }
 ```
@@ -625,8 +621,7 @@
 
 ```json
 {
-  "project_name": "Project A",
-  "description": "Project A Desc"
+  "project_name": "Project A"
 }
 ```
 
@@ -639,8 +634,7 @@
   "message": "New project successfully created",
   "data": {
     "id": 1,
-    "project_name": "Project A",
-    "description": "Project A Desc"
+    "project_name": "Project A"
   }
 }
 ```
@@ -654,8 +648,7 @@
 
 ```json
 {
-  "project_name": "Project A Updated",
-  "description": "Project A Updated"
+  "project_name": "Project A Updated"
 }
 ```
 
@@ -668,8 +661,7 @@
   "message": "Project with ID 1 has been updated",
   "data": {
     "id": 1,
-    "project_name": "Project A Updated",
-    "description": "Project A Updated"
+    "project_name": "Project A Updated"
   }
 }
 ```

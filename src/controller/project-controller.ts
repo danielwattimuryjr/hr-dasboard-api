@@ -7,13 +7,11 @@ import { StatusCodes } from "http-status-codes";
 type Project = {
   id?: number;
   project_name: string;
-  description: string;
 }
 
 type ProjectResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 type ProjectRequest = Request<{ project_id?: number }, any, {
   project_name: string;
-  description: string;
 }>
 
 const getAllProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<Project[]>) => {
@@ -66,11 +64,11 @@ const getProjectById = asyncHandler(async (req: ProjectRequest, res: ProjectResp
 })
 
 const createNewProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<Project>) => {
-  const { description, project_name } = req.body
+  const { project_name } = req.body
 
   const storeNewProjectResult = await query<Project>(
-    `INSERT INTO projects (project_name, description) VALUES ($1, $2) RETURNING *`,
-    [project_name, description]
+    `INSERT INTO projects (project_name) VALUES ($1) RETURNING *`,
+    [project_name]
   )
 
   res.status(StatusCodes.CREATED).json({
@@ -83,11 +81,11 @@ const createNewProject = asyncHandler(async (req: ProjectRequest, res: ProjectRe
 
 const updateProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<Project>) => {
   const project_id = Number(req.params.project_id);
-  const { description, project_name } = req.body
+  const { project_name } = req.body
 
   const updateProjectResult = await query<Project>(
-    `UPDATE projects SET project_name=$1, description=$2 WHERE id=$3 RETURNING *`,
-    [project_name, description, project_id]
+    `UPDATE projects SET project_name=$1, WHERE id=$2 RETURNING *`,
+    [project_name, project_id]
   )
 
   res.status(StatusCodes.OK).json({

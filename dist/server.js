@@ -399,7 +399,7 @@ var require_lib = __commonJS({
 
 // src/server.ts
 var import_config = require("dotenv/config");
-var import_express7 = __toESM(require("express"));
+var import_express8 = __toESM(require("express"));
 
 // src/route/employee-route.ts
 var import_express = __toESM(require("express"));
@@ -464,6 +464,19 @@ var pg_default = { connect, disconnect };
 
 // src/controller/employee-controller.ts
 var import_http_status_codes = require("http-status-codes");
+var getAllEmployessClient = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const fetchAllEmployees = yield query(
+    ` SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role, u.role_id
+    FROM users u 
+    LEFT JOIN roles r ON u.role_id = r.id 
+    ORDER BY u.id ASC`
+  );
+  res.status(import_http_status_codes.StatusCodes.OK).json({
+    status: import_http_status_codes.StatusCodes.OK,
+    success: true,
+    data: fetchAllEmployees == null ? void 0 : fetchAllEmployees.rows
+  });
+}));
 var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function* () {
   var _a;
   const whereClauses = [];
@@ -547,10 +560,11 @@ var deleteEmployee = asyncHandler((req, res) => __async(void 0, null, function* 
   });
 }));
 var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const { email, full_name, username, password, role_id } = req.body;
+  const { email, full_name, username, password, phone } = req.body;
+  const role_id = Number(req.body.role_id);
   const result = yield query(
-    `INSERT INTO public."users" (email, full_name, username, password, role_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [email, full_name, username, password, role_id]
+    `INSERT INTO public."users" (email, full_name, username, password, role_id, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [email, full_name, username, password, role_id, phone]
   );
   res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.CREATED,
@@ -624,6 +638,7 @@ var UpdateUserProfileSchema = import_zod2.z.object({
 // src/route/employee-route.ts
 var route = import_express.default.Router();
 route.get("/", getAllEmployees);
+route.get("/client", getAllEmployessClient);
 route.post("/", validateData(CreateUserSchema), createEmployee);
 route.delete("/:user_id", deleteEmployee);
 route.get("/:user_id", getEmployeeById);
@@ -967,10 +982,10 @@ var getProjectById = asyncHandler((req, res) => __async(void 0, null, function* 
   });
 }));
 var createNewProject = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const { description, project_name } = req.body;
+  const { project_name } = req.body;
   const storeNewProjectResult = yield query(
-    `INSERT INTO projects (project_name, description) VALUES ($1, $2) RETURNING *`,
-    [project_name, description]
+    `INSERT INTO projects (project_name) VALUES ($1) RETURNING *`,
+    [project_name]
   );
   res.status(import_http_status_codes7.StatusCodes.CREATED).json({
     status: import_http_status_codes7.StatusCodes.CREATED,
@@ -981,10 +996,10 @@ var createNewProject = asyncHandler((req, res) => __async(void 0, null, function
 }));
 var updateProject = asyncHandler((req, res) => __async(void 0, null, function* () {
   const project_id = Number(req.params.project_id);
-  const { description, project_name } = req.body;
+  const { project_name } = req.body;
   const updateProjectResult = yield query(
-    `UPDATE projects SET project_name=$1, description=$2 WHERE id=$3 RETURNING *`,
-    [project_name, description, project_id]
+    `UPDATE projects SET project_name=$1, WHERE id=$2 RETURNING *`,
+    [project_name, project_id]
   );
   res.status(import_http_status_codes7.StatusCodes.OK).json({
     status: import_http_status_codes7.StatusCodes.OK,
@@ -1015,29 +1030,122 @@ route6.put("/:project_id", updateProject);
 route6.delete("/:project_id", deleteProject);
 var project_route_default = route6;
 
+// src/route/role-route.ts
+var import_express7 = __toESM(require("express"));
+
+// src/controller/role-controller.ts
+var import_http_status_codes8 = require("http-status-codes");
+var getAllRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const fetchRoleResult = yield query(
+    `SELECT * FROM roles ORDER BY role_name`
+  );
+  res.status(import_http_status_codes8.StatusCodes.OK).json({
+    status: import_http_status_codes8.StatusCodes.OK,
+    success: true,
+    data: (fetchRoleResult == null ? void 0 : fetchRoleResult.rows) || []
+  });
+}));
+var getRoleById = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const role_id = Number(req.params.role_id);
+  if (!role_id) {
+    const response = {
+      status: import_http_status_codes8.StatusCodes.BAD_REQUEST,
+      message: "Role ID not specified"
+    };
+    return res.status(import_http_status_codes8.StatusCodes.BAD_REQUEST).json(response);
+  }
+  const checkRoleExistenceResult = yield query(
+    `SELECT * FROM roles WHERE id=$1`,
+    [role_id]
+  );
+  if ((checkRoleExistenceResult == null ? void 0 : checkRoleExistenceResult.rowCount) < 0) {
+    const response = {
+      status: import_http_status_codes8.StatusCodes.NOT_FOUND,
+      message: `Role with ID ${role_id} not found`
+    };
+    return res.status(import_http_status_codes8.StatusCodes.NOT_FOUND).json(response);
+  }
+  const fetchRoleResult = yield query(
+    `SELECT * FROM roles ORDER BY role_name`
+  );
+  res.status(import_http_status_codes8.StatusCodes.OK).json({
+    status: import_http_status_codes8.StatusCodes.OK,
+    success: true,
+    data: fetchRoleResult == null ? void 0 : fetchRoleResult.rows.at(0)
+  });
+}));
+var createNewRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const { display_name, role_name } = req.body;
+  const storeNewRoleResult = yield query(
+    `INSERT INTO roles (display_name, role_name) VALUES ($1, $2) RETURNING *`,
+    [display_name, role_name]
+  );
+  res.status(import_http_status_codes8.StatusCodes.CREATED).json({
+    status: import_http_status_codes8.StatusCodes.CREATED,
+    success: true,
+    message: `New role successfully created`,
+    data: storeNewRoleResult == null ? void 0 : storeNewRoleResult.rows.at(0)
+  });
+}));
+var updateRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const role_id = Number(req.params.role_id);
+  const { display_name, role_name } = req.body;
+  const updateRoleResult = yield query(
+    `UPDATE roles SET display_name=$1, role_name=$2 WHERE id=$3 RETURNING *`,
+    [display_name, role_name, role_id]
+  );
+  res.status(import_http_status_codes8.StatusCodes.OK).json({
+    status: import_http_status_codes8.StatusCodes.OK,
+    success: true,
+    message: `Role with ID ${role_id} has been updated`,
+    data: updateRoleResult == null ? void 0 : updateRoleResult.rows.at(0)
+  });
+}));
+var deleteRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const role_id = Number(req.params.role_id);
+  yield query(
+    `DELETE FROM projects WHERE id=$1`,
+    [role_id]
+  );
+  res.status(import_http_status_codes8.StatusCodes.OK).json({
+    status: import_http_status_codes8.StatusCodes.OK,
+    success: true,
+    message: `Role with ID ${role_id} has been deleted`
+  });
+}));
+
+// src/route/role-route.ts
+var route7 = import_express7.default.Router();
+route7.get("/", getAllRole);
+route7.get("/:role_id", getRoleById);
+route7.post("/", createNewRole);
+route7.put("/:role_id", updateRole);
+route7.delete("/:role_id", deleteRole);
+var role_route_default = route7;
+
 // src/server.ts
 var import_cors = __toESM(require_lib());
 var import_helmet = __toESM(require("helmet"));
 
 // src/error/not-found.ts
-var import_http_status_codes8 = require("http-status-codes");
+var import_http_status_codes9 = require("http-status-codes");
 var notFoundHandler = (req, res) => {
   const response = {
-    status: import_http_status_codes8.StatusCodes.NOT_FOUND,
+    status: import_http_status_codes9.StatusCodes.NOT_FOUND,
     message: `Not found: ${req.originalUrl}`
   };
   res.status(404).json(response);
 };
 
 // src/error/error.ts
-var import_http_status_codes9 = require("http-status-codes");
+var import_http_status_codes10 = require("http-status-codes");
 var errorHandler = (error, req, res, next) => {
   const response = {
-    status: import_http_status_codes9.StatusCodes.INTERNAL_SERVER_ERROR,
+    status: import_http_status_codes10.StatusCodes.INTERNAL_SERVER_ERROR,
     message: error.message
   };
   console.log(error);
-  return res.status(import_http_status_codes9.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
+  return res.status(import_http_status_codes10.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
 };
 
 // src/server.ts
@@ -1045,20 +1153,21 @@ var import_cookie_parser = __toESM(require("cookie-parser"));
 require("dotenv").config();
 var asyncHandler2 = () => __async(exports, null, function* () {
   yield pg_default.connect();
-  const app = (0, import_express7.default)();
+  const app = (0, import_express8.default)();
   const PORT = process.env.PORT || 8080;
   app.use((0, import_cookie_parser.default)());
   app.use((0, import_helmet.default)());
   app.use((0, import_cors.default)());
-  app.use(import_express7.default.json());
-  app.use(import_express7.default.urlencoded({ extended: true }));
-  app.use(import_express7.default.static("public"));
+  app.use(import_express8.default.json());
+  app.use(import_express8.default.urlencoded({ extended: true }));
+  app.use(import_express8.default.static("public"));
   app.use("/api/auth/", auth_route_default);
   app.use("/api/employees/", employee_route_default);
   app.use("/api/tasks/", task_route_default);
   app.use("/api/charts/", chart_route_default);
   app.use("/api/absences/", absence_route_default);
   app.use("/api/projects/", project_route_default);
+  app.use("/api/roles/", role_route_default);
   app.use(notFoundHandler);
   app.use(errorHandler);
   app.listen(

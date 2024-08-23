@@ -8,6 +8,7 @@ import chartRouter from "./route/chart-route";
 import authRouter from "./route/auth-route";
 import absenceRoute from "./route/absence-route";
 import projectRoute from "./route/project-route";
+import roleRoute from "./route/role-route";
 import cors from "cors"
 import helmet from "helmet";
 import db from "./libs/pg"
@@ -36,6 +37,7 @@ const asyncHandler = async () => {
   app.use('/api/charts/', chartRouter)
   app.use('/api/absences/', absenceRoute)
   app.use('/api/projects/', projectRoute)
+  app.use('/api/roles/', roleRoute)
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -9,7 +9,8 @@ type Employee = {
   email: string;
   full_name: string;
   username: string;
-  role_name: string;
+  role: string;
+  role_id: number;
   display_name: string;
 }
 
@@ -20,11 +21,27 @@ type EmployeeRequest = Request<{ user_id: number }, any, {
   username: string;
   password: string;
   role_id: number;
+  phone: string;
 }, {
   search: string;
   limit: string;
   page: string;
 }>
+
+export const getAllEmployessClient = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee[]>) => {
+  const fetchAllEmployees = await query<Employee>(
+    ` SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role, u.role_id
+    FROM users u 
+    LEFT JOIN roles r ON u.role_id = r.id 
+    ORDER BY u.id ASC`
+  )
+
+  res.status(StatusCodes.OK).json({
+    status: StatusCodes.OK,
+    success: true,
+    data: fetchAllEmployees?.rows
+  });
+})
 
 // @desc  Get all users
 // @route GET /api/employees
@@ -141,11 +158,12 @@ export const deleteEmployee = asyncHandler(async (req: Request, res: EmployeeRes
 // @desc Create a user
 // @route POST /api/employees
 export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
-  const { email, full_name, username, password, role_id } = req.body
+  const { email, full_name, username, password, phone } = req.body
+  const role_id = Number(req.body.role_id)
 
   const result = await query<Employee>(
-    `INSERT INTO public."users" (email, full_name, username, password, role_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [email, full_name, username, password, role_id]
+    `INSERT INTO public."users" (email, full_name, username, password, role_id, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [email, full_name, username, password, role_id, phone]
   )
 
   res.status(StatusCodes.OK).json({
