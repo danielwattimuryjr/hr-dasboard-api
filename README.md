@@ -50,13 +50,13 @@
   "data": [
     {
       "project_id": 1,
-      "description": "Deskripsi A",
+      "task": "Deskripsi A",
       "start": "2024-08-02 17:00:00",
       "end": "2024-08-02 18:00:00"
     },
     {
       "project_id": 1,
-      "description": "Deskripsi B",
+      "task": "Deskripsi B",
       "start": "2024-08-03 07:00:00",
       "end": "2024-08-03 17:00:00"
     }
@@ -74,7 +74,7 @@
   "data": [
     {
       "id": 1,
-      "description": "Deskripsi A",
+      "task": "Deskripsi A",
       "user_id": 126,
       "start": "2024-08-02T09:00:00.000Z",
       "end": "2024-08-02T10:00:00.000Z",
@@ -82,7 +82,7 @@
     },
     {
       "id": 2,
-      "description": "Deskripsi B",
+      "task": "Deskripsi B",
       "user_id": 126,
       "start": "2024-08-02T23:00:00.000Z",
       "end": "2024-08-03T09:00:00.000Z",

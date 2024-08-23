@@ -8,7 +8,7 @@ import { fetchTasksByUserId } from "../helper/functions";
 type Task = {
   id?: number;
   user_id?: number;
-  description: string;
+  task: string;
   start: Date;
   end: Date;
   project_id: number;
@@ -35,13 +35,13 @@ export const saveTask = asyncHandler(async (req: TaskRequest, res: Response) => 
       q.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
 
       params.push(`${task.project_id}`)
-      params.push(`${task.description}`)
+      params.push(`${task.task}`)
       params.push(`${task.start}`)
       params.push(`${task.end}`)
       params.push(`${user_id}`)
     })
 
-    const queryStr = `INSERT INTO tasks (project_id, description, start, "end", user_id) VALUES ` + q.join(', ') + `RETURNING *`;
+    const queryStr = `INSERT INTO tasks (project_id, task, start, "end", user_id) VALUES ` + q.join(', ') + `RETURNING *`;
 
     const task_result = await query<Task>(queryStr, params)
     await query("COMMIT")
