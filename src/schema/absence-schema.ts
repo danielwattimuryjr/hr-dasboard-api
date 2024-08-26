@@ -6,7 +6,7 @@ const absenceSchema = z.object({
     .min(1, { message: "Start time is required" }),
   type: z.enum([
     'WFH', 'AL', 'SL'
-  ], { message: "Nice" })
+  ], { message: "Type not match!! The only accepted value are 'WFH', 'AL', 'SL'" })
 })
 
 export { absenceSchema };

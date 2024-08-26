@@ -959,7 +959,7 @@ var absenceSchema = import_zod4.z.object({
     "WFH",
     "AL",
     "SL"
-  ], { message: "Nice" })
+  ], { message: "Type not match!! The only accepted value are 'WFH', 'AL', 'SL'" })
 });
 
 // src/route/absence-route.ts
