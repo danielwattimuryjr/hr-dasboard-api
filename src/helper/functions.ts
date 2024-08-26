@@ -3,9 +3,9 @@ import { Period, Task } from "../types";
 
 // @desc Calculate total working of hours of given time
 const calculateWorkingHours = (start: Date, end: Date): number => {
-  if (start >= end) {
-    throw new Error('End time must be after start time');
-  }
+  // if (start >= end) {
+  //   throw new Error('End time must be after start time');
+  // }
 
   const differenceInMilliseconds = end.getTime() - start.getTime();
 

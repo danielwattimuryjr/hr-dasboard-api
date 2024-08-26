@@ -541,7 +541,7 @@
 ```json
 {
   "user_id": 126,
-  "date": "2024-08-10T08:00:00Z",
+  "date": "2024-08-10 08:00:00Z",
   "type": "AL"
 }
 ```
@@ -676,6 +676,136 @@
   "status": 200,
   "success": true,
   "message": "Project with ID 3 has been deleted"
+}
+```
+
+</details>
+
+</details>
+
+#### Roles
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/roles</b></code> <code>(Get all available roles)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "role_name": "back-end",
+      "display_name": "Back End",
+      "total_users": "3"
+    },
+    {
+      "id": 3,
+      "role_name": "mobile",
+      "display_name": "Mobile",
+      "total_users": "3"
+    },
+    {
+      "id": 1,
+      "role_name": "front-end",
+      "display_name": "Front End",
+      "total_users": "5"
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/roles/{role_id}</b></code> <code>(Get a single role by it's ID)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": {
+    "id": 2,
+    "role_name": "back-end",
+    "display_name": "Back End"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>POST</code> <code><b>192.168.18.30:3000/api/roles/</b></code> <code>(Create a role)</code></summary>
+
+##### Request
+
+```json
+{
+  "role_name": "test-create",
+  "display_name": "Test Create"
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 201,
+  "success": true,
+  "message": "New role successfully created",
+  "data": {
+    "id": 4,
+    "role_name": "test-create",
+    "display_name": "Test Create"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>PUT</code> <code><b>192.168.18.30:3000/api/roles/{role_id}</b></code> <code>(Update a role)</code></summary>
+
+##### Request
+
+```json
+{
+  "role_name": "test-update",
+  "display_name": "Test Updated"
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Role with ID 4 has been updated",
+  "data": {
+    "id": 4,
+    "role_name": "test-update",
+    "display_name": "Test Updated"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>DELETE</code> <code><b>192.168.18.30:3000/api/roles/{role_id}</b></code> <code>(Delete a role)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Role with ID 4 has been deleted"
 }
 ```
 

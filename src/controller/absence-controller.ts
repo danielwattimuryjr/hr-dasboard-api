@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
@@ -52,6 +52,32 @@ const getAbsenceData = asyncHandler(async (req: AbsenceRequest, res: AbsenceResp
 const createNewAbsence = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<AbsenceItem>) => {
   const { user_id, date, type } = req.body
 
+  const checkQueryResult = await query<{ count: number }>(
+    `SELECT *
+      FROM absences 
+      WHERE user_id=$1
+      AND date >= date_trunc('day', $2::timestamp) 
+      AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
+      AND type=$3`,
+    [user_id, date, type]
+  )
+
+  if (checkQueryResult?.rowCount > 0) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      status: StatusCodes.BAD_REQUEST,
+      message: `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`
+    })
+  }
+
+  const today = new Date()
+
+  if (new Date(date) < today) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      status: StatusCodes.BAD_REQUEST,
+      message: `The date awkoakowa`
+    })
+  }
+
   const saveAbsenceResult = await query(
     `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
     [Number(user_id), date, type]
@@ -67,5 +93,5 @@ const createNewAbsence = asyncHandler(async (req: AbsenceRequest, res: AbsenceRe
 
 export {
   getAbsenceData,
-  createNewAbsence
+  createNewAbsence,
 }

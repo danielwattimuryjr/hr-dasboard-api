@@ -653,9 +653,6 @@ var import_http_status_codes3 = require("http-status-codes");
 
 // src/helper/functions.ts
 var calculateWorkingHours = (start, end) => {
-  if (start >= end) {
-    throw new Error("End time must be after start time");
-  }
   const differenceInMilliseconds = end.getTime() - start.getTime();
   const differenceInHours = differenceInMilliseconds / (1e3 * 60 * 60);
   return differenceInHours;
@@ -766,7 +763,7 @@ var deleteTask = asyncHandler((req, res) => __async(void 0, null, function* () {
 var import_zod3 = require("zod");
 var taskItemSchema = import_zod3.z.object({
   project_id: import_zod3.z.number().min(1, { message: "Project name is required" }),
-  description: import_zod3.z.string().min(1, { message: "Description is required" }),
+  task: import_zod3.z.string().min(1, { message: "Description is required" }),
   start: import_zod3.z.string().min(1, { message: "Start time is required" }),
   end: import_zod3.z.string().min(1, { message: "End time is required" })
 });
@@ -919,6 +916,28 @@ var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* 
 }));
 var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function* () {
   const { user_id, date, type } = req.body;
+  const checkQueryResult = yield query(
+    `SELECT *
+      FROM absences 
+      WHERE user_id=$1
+      AND date >= date_trunc('day', $2::timestamp) 
+      AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
+      AND type=$3`,
+    [user_id, date, type]
+  );
+  if ((checkQueryResult == null ? void 0 : checkQueryResult.rowCount) > 0) {
+    return res.status(import_http_status_codes6.StatusCodes.BAD_REQUEST).json({
+      status: import_http_status_codes6.StatusCodes.BAD_REQUEST,
+      message: `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`
+    });
+  }
+  const today = /* @__PURE__ */ new Date();
+  if (new Date(date) < today) {
+    return res.status(import_http_status_codes6.StatusCodes.BAD_REQUEST).json({
+      status: import_http_status_codes6.StatusCodes.BAD_REQUEST,
+      message: `The date awkoakowa`
+    });
+  }
   const saveAbsenceResult = yield query(
     `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
     [Number(user_id), date, type]
@@ -931,10 +950,22 @@ var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function
   });
 }));
 
+// src/schema/absence-schema.ts
+var import_zod4 = require("zod");
+var absenceSchema = import_zod4.z.object({
+  user_id: import_zod4.z.number().min(1, { message: "User ID is required" }),
+  date: import_zod4.z.string().min(1, { message: "Start time is required" }),
+  type: import_zod4.z.enum([
+    "WFH",
+    "AL",
+    "SL"
+  ], { message: "Nice" })
+});
+
 // src/route/absence-route.ts
 var route5 = import_express5.default.Router();
 route5.get("/", getAbsenceData);
-route5.post("/", createNewAbsence);
+route5.post("/", validateData(absenceSchema), createNewAbsence);
 var absence_route_default = route5;
 
 // src/route/project-route.ts
@@ -1037,7 +1068,21 @@ var import_express7 = __toESM(require("express"));
 var import_http_status_codes8 = require("http-status-codes");
 var getAllRole = asyncHandler((req, res) => __async(void 0, null, function* () {
   const fetchRoleResult = yield query(
-    `SELECT * FROM roles ORDER BY role_name`
+    `
+      SELECT
+          r.id,
+          r.role_name,
+          r.display_name,
+          COUNT(u.id) AS total_users
+      FROM
+          roles r
+      LEFT JOIN
+          users u
+      ON
+          r.id = u.role_id
+      GROUP BY
+          r.id, r.role_name, r.display_name
+    `
   );
   res.status(import_http_status_codes8.StatusCodes.OK).json({
     status: import_http_status_codes8.StatusCodes.OK,

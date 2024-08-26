@@ -8,6 +8,7 @@ type Role = {
   id?: number;
   role_name: string;
   display_name: string;
+  total_users?: number;
 }
 
 type RoleResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
@@ -17,8 +18,22 @@ type RoleRequest = Request<{ role_id?: number }, any, {
 }>
 
 const getAllRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role[]>) => {
-  const fetchRoleResult = await query<Project>(
-    `SELECT * FROM roles ORDER BY role_name`
+  const fetchRoleResult = await query<Role>(
+    `
+      SELECT
+          r.id,
+          r.role_name,
+          r.display_name,
+          COUNT(u.id) AS total_users
+      FROM
+          roles r
+      LEFT JOIN
+          users u
+      ON
+          r.id = u.role_id
+      GROUP BY
+          r.id, r.role_name, r.display_name
+    `
   )
 
   res.status(StatusCodes.OK).json({
