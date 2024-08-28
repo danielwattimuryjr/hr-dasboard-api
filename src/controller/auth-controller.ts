@@ -25,14 +25,24 @@ export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<s
   const { email, password } = req.body;
 
   const result = await query<User>(
-    `SELECT u.id, u.email, u.full_name, u.username, r.role_name, r.display_name
-   FROM public."users" u
-   JOIN roles r ON u.role_id = r.id
-   WHERE u.email=$1 AND u.password=$2`,
+    `
+      SELECT 
+        u.id, 
+        u.email, 
+        u.full_name, 
+        u.username, 
+        r.role_name, 
+        r.display_name
+      FROM 
+        public."users" u
+      JOIN 
+        roles r ON u.role_id = r.id
+      WHERE 
+        u.email=$1 AND u.password=$2`,
     [email, password]
   )
 
-  if (result?.rowCount || 0 < 1) {
+  if (result?.rowCount < 1) {
     const errorResponse: ErrorResponse = {
       status: StatusCodes.NOT_FOUND,
       message: "User with email or password specified, are not found"

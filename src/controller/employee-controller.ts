@@ -186,11 +186,11 @@ export const updateProfile = asyncHandler(async (req: EmployeeRequest, res: Empl
     user_id = 1;
   }
 
-  const { email, full_name, username, password } = req.body;
+  const { email, full_name, username, password, role_id } = req.body;
 
   const result = await query<Employee>(
-    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4 WHERE id=$5 RETURNING *`,
-    [email, full_name, username, password, user_id]
+    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4, role_id=$5::integer WHERE id=$6 RETURNING *`,
+    [email, full_name, username, password, role_id, user_id]
   )
 
   res.status(StatusCodes.OK).json({

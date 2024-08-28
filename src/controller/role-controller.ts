@@ -59,24 +59,10 @@ const getRoleById = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role
     `SELECT * FROM roles WHERE id=$1`,
     [role_id]
   )
-
-  if (checkRoleExistenceResult?.rowCount < 0) {
-    const response: ErrorResponse = {
-      status: StatusCodes.NOT_FOUND,
-      message: `Role with ID ${role_id} not found`
-    }
-
-    return res.status(StatusCodes.NOT_FOUND).json(response)
-  }
-
-  const fetchRoleResult = await query<Role>(
-    `SELECT * FROM roles ORDER BY role_name`
-  )
-
   res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
-    data: fetchRoleResult?.rows.at(0)
+    data: checkRoleExistenceResult?.rows.at(0)
   })
 })
 

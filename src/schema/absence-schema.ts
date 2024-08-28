@@ -9,4 +9,11 @@ const absenceSchema = z.object({
   ], { message: "Type not match!! The only accepted value are 'WFH', 'AL', 'SL'" })
 })
 
-export { absenceSchema };
+const absenceApprovalSchema = z.object({
+  isApproved: z.boolean({
+    required_error: "The isApproved is required",
+    message: "isApproved Only accept boolean value"
+  })
+})
+
+export { absenceSchema, absenceApprovalSchema };

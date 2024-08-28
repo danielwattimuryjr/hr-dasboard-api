@@ -580,10 +580,10 @@ var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* (
   } else {
     user_id = 1;
   }
-  const { email, full_name, username, password } = req.body;
+  const { email, full_name, username, password, role_id } = req.body;
   const result = yield query(
-    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4 WHERE id=$5 RETURNING *`,
-    [email, full_name, username, password, user_id]
+    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4, role_id=$5::integer WHERE id=$6 RETURNING *`,
+    [email, full_name, username, password, role_id, user_id]
   );
   res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
@@ -596,7 +596,7 @@ var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* (
 // src/middleware/validation-middleware.ts
 var import_zod = require("zod");
 var import_http_status_codes2 = require("http-status-codes");
-function validateData(schema) {
+var validateData = (schema) => {
   return (req, res, next) => {
     try {
       schema.parse(req.body);
@@ -617,7 +617,63 @@ function validateData(schema) {
       }
     }
   };
-}
+};
+var absenceValidation = (req, res, next) => __async(void 0, null, function* () {
+  var _a, _b;
+  const { user_id, date, type } = req.body;
+  const today = /* @__PURE__ */ new Date();
+  const requestDate = new Date(date);
+  const checkQueryResult = yield query(
+    `
+    SELECT 
+      count(*)
+    FROM absences 
+    WHERE user_id=$1
+    AND date >= date_trunc('day', $2::timestamp) 
+    AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
+    AND type=$3`,
+    [user_id, date, type]
+  );
+  if (((_a = checkQueryResult == null ? void 0 : checkQueryResult.rows.at(0)) == null ? void 0 : _a.count) > 0) {
+    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
+      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
+      message: `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`
+    });
+  }
+  const checkLeavesResult = yield query(
+    `
+      SELECT 
+        count(*)
+      FROM absences
+      WHERE user_id=$1
+      AND date >= date_trunc('year', current_timestamp)
+      AND date < date_trunc('year', current_timestamp) + interval '1 year'
+      AND type='AL'
+      OR type='SL'
+    `,
+    [user_id]
+  );
+  if (((_b = checkLeavesResult == null ? void 0 : checkLeavesResult.rows.at(0)) == null ? void 0 : _b.count) >= 12) {
+    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
+      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
+      message: `The user with ID ${user_id} AL and SL have reach the limit (12)`
+    });
+  }
+  if (requestDate < today) {
+    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
+      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
+      message: `The date is in the past.`
+    });
+  }
+  const dayOfWeek = requestDate.getDay();
+  if (dayOfWeek === 6 || dayOfWeek === 0) {
+    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
+      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
+      message: `You cannot take leaves at weekend`
+    });
+  }
+  next();
+});
 
 // src/schema/user-schema.ts
 var import_zod2 = require("zod");
@@ -847,13 +903,23 @@ var import_jsonwebtoken = __toESM(require("jsonwebtoken"));
 var login = asyncHandler((req, res) => __async(void 0, null, function* () {
   const { email, password } = req.body;
   const result = yield query(
-    `SELECT u.id, u.email, u.full_name, u.username, r.role_name, r.display_name
-   FROM public."users" u
-   JOIN roles r ON u.role_id = r.id
-   WHERE u.email=$1 AND u.password=$2`,
+    `
+      SELECT 
+        u.id, 
+        u.email, 
+        u.full_name, 
+        u.username, 
+        r.role_name, 
+        r.display_name
+      FROM 
+        public."users" u
+      JOIN 
+        roles r ON u.role_id = r.id
+      WHERE 
+        u.email=$1 AND u.password=$2`,
     [email, password]
   );
-  if ((result == null ? void 0 : result.rowCount) || 0 < 1) {
+  if ((result == null ? void 0 : result.rowCount) < 1) {
     const errorResponse = {
       status: import_http_status_codes5.StatusCodes.NOT_FOUND,
       message: "User with email or password specified, are not found"
@@ -916,28 +982,6 @@ var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* 
 }));
 var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function* () {
   const { user_id, date, type } = req.body;
-  const checkQueryResult = yield query(
-    `SELECT *
-      FROM absences 
-      WHERE user_id=$1
-      AND date >= date_trunc('day', $2::timestamp) 
-      AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
-      AND type=$3`,
-    [user_id, date, type]
-  );
-  if ((checkQueryResult == null ? void 0 : checkQueryResult.rowCount) > 0) {
-    return res.status(import_http_status_codes6.StatusCodes.BAD_REQUEST).json({
-      status: import_http_status_codes6.StatusCodes.BAD_REQUEST,
-      message: `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`
-    });
-  }
-  const today = /* @__PURE__ */ new Date();
-  if (new Date(date) < today) {
-    return res.status(import_http_status_codes6.StatusCodes.BAD_REQUEST).json({
-      status: import_http_status_codes6.StatusCodes.BAD_REQUEST,
-      message: `The date awkoakowa`
-    });
-  }
   const saveAbsenceResult = yield query(
     `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
     [Number(user_id), date, type]
@@ -947,6 +991,38 @@ var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function
     success: true,
     message: "Absence data has been created successfully",
     data: saveAbsenceResult == null ? void 0 : saveAbsenceResult.rows.at(0)
+  });
+}));
+var approveAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const absence_id = Number(req.params.absence_id);
+  const isApproved = req.body.isApproved;
+  const updateAbsenceResult = yield query(
+    `
+    UPDATE 
+      absences 
+    SET is_approved=$1 
+    WHERE id=$2
+    RETURNING *
+    `,
+    [isApproved, absence_id]
+  );
+  res.json({
+    status: import_http_status_codes6.StatusCodes.OK,
+    success: true,
+    message: `Absence data has been ${isApproved ? "approved" : "disapproved"}`,
+    data: updateAbsenceResult == null ? void 0 : updateAbsenceResult.rows.at(0)
+  });
+}));
+var deleteAbsence = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const absence_id = Number(req.params.absence_id);
+  yield query(
+    `DELETE FROM absences WHERE id=$1`,
+    [absence_id]
+  );
+  res.json({
+    status: import_http_status_codes6.StatusCodes.OK,
+    success: true,
+    message: `The absence has been deleted/canceled`
   });
 }));
 
@@ -961,11 +1037,19 @@ var absenceSchema = import_zod4.z.object({
     "SL"
   ], { message: "Type not match!! The only accepted value are 'WFH', 'AL', 'SL'" })
 });
+var absenceApprovalSchema = import_zod4.z.object({
+  isApproved: import_zod4.z.boolean({
+    required_error: "The isApproved is required",
+    message: "isApproved Only accept boolean value"
+  })
+});
 
 // src/route/absence-route.ts
 var route5 = import_express5.default.Router();
 route5.get("/", getAbsenceData);
-route5.post("/", validateData(absenceSchema), createNewAbsence);
+route5.post("/", validateData(absenceSchema), absenceValidation, createNewAbsence);
+route5.put("/:absence_id", validateData(absenceApprovalSchema), approveAbsenceData);
+route5.delete("/:absence_id", deleteAbsence);
 var absence_route_default = route5;
 
 // src/route/project-route.ts
@@ -1103,20 +1187,10 @@ var getRoleById = asyncHandler((req, res) => __async(void 0, null, function* () 
     `SELECT * FROM roles WHERE id=$1`,
     [role_id]
   );
-  if ((checkRoleExistenceResult == null ? void 0 : checkRoleExistenceResult.rowCount) < 0) {
-    const response = {
-      status: import_http_status_codes8.StatusCodes.NOT_FOUND,
-      message: `Role with ID ${role_id} not found`
-    };
-    return res.status(import_http_status_codes8.StatusCodes.NOT_FOUND).json(response);
-  }
-  const fetchRoleResult = yield query(
-    `SELECT * FROM roles ORDER BY role_name`
-  );
   res.status(import_http_status_codes8.StatusCodes.OK).json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,
-    data: fetchRoleResult == null ? void 0 : fetchRoleResult.rows.at(0)
+    data: checkRoleExistenceResult == null ? void 0 : checkRoleExistenceResult.rows.at(0)
   });
 }));
 var createNewRole = asyncHandler((req, res) => __async(void 0, null, function* () {

@@ -3,6 +3,7 @@ import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
+import { boolean } from "zod";
 
 type AbsenceItem = {
   user_id?: number;
@@ -52,32 +53,6 @@ const getAbsenceData = asyncHandler(async (req: AbsenceRequest, res: AbsenceResp
 const createNewAbsence = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<AbsenceItem>) => {
   const { user_id, date, type } = req.body
 
-  const checkQueryResult = await query<{ count: number }>(
-    `SELECT *
-      FROM absences 
-      WHERE user_id=$1
-      AND date >= date_trunc('day', $2::timestamp) 
-      AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
-      AND type=$3`,
-    [user_id, date, type]
-  )
-
-  if (checkQueryResult?.rowCount > 0) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      status: StatusCodes.BAD_REQUEST,
-      message: `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`
-    })
-  }
-
-  const today = new Date()
-
-  if (new Date(date) < today) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      status: StatusCodes.BAD_REQUEST,
-      message: `The date awkoakowa`
-    })
-  }
-
   const saveAbsenceResult = await query(
     `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
     [Number(user_id), date, type]
@@ -91,7 +66,55 @@ const createNewAbsence = asyncHandler(async (req: AbsenceRequest, res: AbsenceRe
   })
 })
 
+// @desc  Approve an absence data
+// @route PUT /api/absences/:absence_id
+const approveAbsenceData = asyncHandler(async (req: Request<{ absence_id: number }, any, { isApproved: boolean }>, res: AbsenceResponse<any>) => {
+  const absence_id = Number(req.params.absence_id)
+  const isApproved = req.body.isApproved
+
+  const updateAbsenceResult = await query<{
+    id: number;
+    user_id: number;
+    date: Date;
+    type: 'WFH' | 'AL' | 'SL';
+    isApproved: boolean
+  }>(
+    `
+    UPDATE 
+      absences 
+    SET is_approved=$1 
+    WHERE id=$2
+    RETURNING *
+    `,
+    [isApproved, absence_id]
+  )
+
+  res.json({
+    status: StatusCodes.OK,
+    success: true,
+    message: `Absence data has been ${isApproved ? 'approved' : 'disapproved'}`,
+    data: updateAbsenceResult?.rows.at(0)
+  })
+})
+
+const deleteAbsence = asyncHandler(async (req: Request, res: Response) => {
+  const absence_id = Number(req.params.absence_id);
+
+  await query(
+    `DELETE FROM absences WHERE id=$1`,
+    [absence_id]
+  )
+
+  res.json({
+    status: StatusCodes.OK,
+    success: true,
+    message: `The absence has been deleted/canceled`,
+  })
+})
+
 export {
   getAbsenceData,
   createNewAbsence,
-}
+  approveAbsenceData,
+  deleteAbsence,
+} 
