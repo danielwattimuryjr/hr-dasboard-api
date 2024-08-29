@@ -618,62 +618,6 @@ var validateData = (schema) => {
     }
   };
 };
-var absenceValidation = (req, res, next) => __async(void 0, null, function* () {
-  var _a, _b;
-  const { user_id, date, type } = req.body;
-  const today = /* @__PURE__ */ new Date();
-  const requestDate = new Date(date);
-  const checkQueryResult = yield query(
-    `
-    SELECT 
-      count(*)
-    FROM absences 
-    WHERE user_id=$1
-    AND date >= date_trunc('day', $2::timestamp) 
-    AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
-    AND type=$3`,
-    [user_id, date, type]
-  );
-  if (((_a = checkQueryResult == null ? void 0 : checkQueryResult.rows.at(0)) == null ? void 0 : _a.count) > 0) {
-    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
-      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
-      message: `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`
-    });
-  }
-  const checkLeavesResult = yield query(
-    `
-      SELECT 
-        count(*)
-      FROM absences
-      WHERE user_id=$1
-      AND date >= date_trunc('year', current_timestamp)
-      AND date < date_trunc('year', current_timestamp) + interval '1 year'
-      AND type='AL'
-      OR type='SL'
-    `,
-    [user_id]
-  );
-  if (((_b = checkLeavesResult == null ? void 0 : checkLeavesResult.rows.at(0)) == null ? void 0 : _b.count) >= 12) {
-    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
-      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
-      message: `The user with ID ${user_id} AL and SL have reach the limit (12)`
-    });
-  }
-  if (requestDate < today) {
-    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
-      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
-      message: `The date is in the past.`
-    });
-  }
-  const dayOfWeek = requestDate.getDay();
-  if (dayOfWeek === 6 || dayOfWeek === 0) {
-    return res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json({
-      status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
-      message: `You cannot take leaves at weekend`
-    });
-  }
-  next();
-});
 
 // src/schema/user-schema.ts
 var import_zod2 = require("zod");
@@ -982,6 +926,13 @@ var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* 
 }));
 var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function* () {
   const { user_id, date, type } = req.body;
+  const validationError = yield validateAbsenceRequest(Number(user_id), date, type);
+  if (validationError) {
+    return res.status(400).json({
+      status: 400,
+      message: validationError
+    });
+  }
   const saveAbsenceResult = yield query(
     `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
     [Number(user_id), date, type]
@@ -1025,6 +976,49 @@ var deleteAbsence = asyncHandler((req, res) => __async(void 0, null, function* (
     message: `The absence has been deleted/canceled`
   });
 }));
+var validateAbsenceRequest = (user_id, date, type) => __async(void 0, null, function* () {
+  var _a, _b;
+  const today = /* @__PURE__ */ new Date();
+  const requestDate = new Date(date);
+  const checkQueryResult = yield query(
+    `
+    SELECT 
+      count(*)
+    FROM absences 
+    WHERE user_id=$1
+    AND date >= date_trunc('day', $2::timestamp) 
+    AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
+    AND type=$3`,
+    [user_id, date, type]
+  );
+  if (((_a = checkQueryResult == null ? void 0 : checkQueryResult.rows.at(0)) == null ? void 0 : _a.count) > 0) {
+    return `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`;
+  }
+  const checkLeavesResult = yield query(
+    `
+      SELECT 
+        count(*)
+      FROM absences
+      WHERE user_id=$1
+      AND date >= date_trunc('year', current_timestamp)
+      AND date < date_trunc('year', current_timestamp) + interval '1 year'
+      AND type='AL'
+      OR type='SL'
+    `,
+    [user_id]
+  );
+  if (((_b = checkLeavesResult == null ? void 0 : checkLeavesResult.rows.at(0)) == null ? void 0 : _b.count) >= 12) {
+    return `The user with ID ${user_id} AL and SL have reach the limit (12)`;
+  }
+  if (requestDate < today) {
+    return `The date is in the past.`;
+  }
+  const dayOfWeek = requestDate.getDay();
+  if (dayOfWeek === 6 || dayOfWeek === 0) {
+    return `You cannot take leaves at weekend`;
+  }
+  return null;
+});
 
 // src/schema/absence-schema.ts
 var import_zod4 = require("zod");
@@ -1047,7 +1041,7 @@ var absenceApprovalSchema = import_zod4.z.object({
 // src/route/absence-route.ts
 var route5 = import_express5.default.Router();
 route5.get("/", getAbsenceData);
-route5.post("/", validateData(absenceSchema), absenceValidation, createNewAbsence);
+route5.post("/", validateData(absenceSchema), createNewAbsence);
 route5.put("/:absence_id", validateData(absenceApprovalSchema), approveAbsenceData);
 route5.delete("/:absence_id", deleteAbsence);
 var absence_route_default = route5;
