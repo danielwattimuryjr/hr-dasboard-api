@@ -34,6 +34,7 @@ const asyncHandler = async () => {
   app.use('/api/auth/', authRouter)
   app.use('/api/employees/', employeeRouter)
   app.use('/api/tasks/', taskRouter)
+  // app.use('/api/charts/', verifyToken, chartRouter)
   app.use('/api/charts/', chartRouter)
   app.use('/api/absences/', absenceRoute)
   app.use('/api/projects/', projectRoute)

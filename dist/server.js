@@ -411,6 +411,9 @@ var asyncHandler = (asyncFnc) => {
   };
 };
 
+// src/controller/employee-controller.ts
+var import_http_status_codes = require("http-status-codes");
+
 // src/libs/pg.ts
 var import_pg = require("pg");
 var client = null;
@@ -462,115 +465,151 @@ var disconnect = () => __async(void 0, null, function* () {
 });
 var pg_default = { connect, disconnect };
 
-// src/controller/employee-controller.ts
-var import_http_status_codes = require("http-status-codes");
-var getAllEmployessClient = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const fetchAllEmployees = yield query(
-    ` SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role, u.role_id
-    FROM users u 
-    LEFT JOIN roles r ON u.role_id = r.id 
-    ORDER BY u.id ASC`
-  );
-  res.status(import_http_status_codes.StatusCodes.OK).json({
-    status: import_http_status_codes.StatusCodes.OK,
-    success: true,
-    data: fetchAllEmployees == null ? void 0 : fetchAllEmployees.rows
-  });
-}));
-var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function* () {
+// src/services/employee.service.ts
+var _EmployeeService = class _EmployeeService {
+};
+_EmployeeService.GET_ALL = (limit, currentPage, searchStr) => __async(_EmployeeService, null, function* () {
   var _a;
   const whereClauses = [];
   const queryParams = [];
   let limitQuery = "";
   let offsetQuery = "";
-  let searchStr = req.query.search;
   if (searchStr) {
     whereClauses.push(`u::text ILIKE $${queryParams.length + 1} OR r::text ILIKE $${queryParams.length + 1}`);
     queryParams.push(`%${searchStr}%`);
   }
-  const limit = parseInt(req.query.limit, 10) || 10;
-  const page = parseInt(req.query.page, 10) || 1;
   limitQuery = `LIMIT $${queryParams.length + 1}`;
   queryParams.push(limit);
   offsetQuery = `OFFSET $${queryParams.length + 1}`;
-  queryParams.push((page - 1) * limit);
+  queryParams.push((currentPage - 1) * limit);
   const whereClause = whereClauses.length > 0 ? " WHERE " + whereClauses.join(" AND ") : "";
   const queryString = `
-    SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role
-    FROM users u 
-    LEFT JOIN roles r ON u.role_id = r.id 
-    ${whereClause}
-    ORDER BY u.id ASC
-    ${limitQuery}
-    ${offsetQuery}
-  `;
+      SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role
+      FROM users u 
+      LEFT JOIN roles r ON u.role_id = r.id
+      ${whereClause}
+      ORDER BY u.id ASC
+      ${limitQuery}
+      ${offsetQuery}
+    `;
   const countQueryString = `
-    SELECT COUNT(*) AS total 
-    FROM users u 
-    LEFT JOIN roles r ON u.role_id = r.id 
-    ${whereClause}
-    
-  `;
+      SELECT COUNT(*) AS total 
+      FROM users u 
+      LEFT JOIN roles r ON u.role_id = r.id 
+      ${whereClause}
+    `;
   const result = yield query(queryString, queryParams);
   const countResult = yield query(countQueryString, searchStr ? [queryParams[0]] : []);
   const totalRecords = Number(((_a = countResult == null ? void 0 : countResult.rows[0]) == null ? void 0 : _a.total) || 0);
   const totalPages = Math.ceil(totalRecords / limit);
-  const currentPage = page;
+  return {
+    totalItems: totalRecords,
+    totalPages,
+    currentPage,
+    limit,
+    search: searchStr || null,
+    rowPerPages: [5, 10, 15],
+    employees: result == null ? void 0 : result.rows
+  };
+});
+_EmployeeService.GET_BY_ID = (employeeId) => __async(_EmployeeService, null, function* () {
+  const fethUserInfoByIdResult = yield query(`
+    SELECT
+      u.*, 
+      r.display_name AS role
+    FROM public."users" u
+    LEFT JOIN roles r ON u.role_id = r.id
+    WHERE u.id = $1::integer
+    `, [employeeId]);
+  return fethUserInfoByIdResult == null ? void 0 : fethUserInfoByIdResult.rows.at(0);
+});
+_EmployeeService.DELETE = (employeeId) => __async(_EmployeeService, null, function* () {
+  yield query(`
+      DELETE FROM public."users" 
+      WHERE id=$1::integer
+    `, [employeeId]);
+});
+_EmployeeService.STORE = (employee) => __async(_EmployeeService, null, function* () {
+  const { email, full_name, username, password, phone, role_id } = employee;
+  const storeEmployeeResult = yield query(`
+    INSERT INTO public."users" (
+      email,
+      full_name,
+      username,
+      password,
+      role_id,
+      phone
+    ) VALUES ($1, $2, $3, $4, $5::integer, $6) 
+    RETURNING *
+    `, [email, full_name, username, password, role_id, phone]);
+  return storeEmployeeResult == null ? void 0 : storeEmployeeResult.rows.at(0);
+});
+_EmployeeService.UPDATE = (employee_id, employee) => __async(_EmployeeService, null, function* () {
+  const { email, full_name, username, password, phone, role_id } = employee;
+  const updateEmployeeResult = yield query(`
+    UPDATE public."users"
+    SET 
+      email=$1, 
+      full_name=$2, 
+      username=$3, 
+      password=$4, 
+      role_id=$5::integer,
+      phone=$6
+    WHERE id=$7::integer 
+    RETURNING *
+    `, [email, full_name, username, password, role_id, phone, employee_id]);
+  return updateEmployeeResult == null ? void 0 : updateEmployeeResult.rows.at(0);
+});
+var EmployeeService = _EmployeeService;
+var employee_service_default = EmployeeService;
+
+// src/controller/employee-controller.ts
+var getAllEmployessClient = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const test = yield employee_service_default.GET_ALL();
+  res.json(test);
+}));
+var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const defaultLimit = 10;
+  const defaultPage = 1;
+  const limit = parseInt(req.query.limit, 10) || defaultLimit;
+  const currentPage = parseInt(req.query.page, 10) || defaultPage;
+  const searchStr = req.query.search;
+  const result = yield employee_service_default.GET_ALL(
+    limit,
+    currentPage,
+    searchStr
+  );
   res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
-    data: {
-      totalItems: totalRecords,
-      totalPages,
-      currentPage,
-      limit,
-      search: searchStr || null,
-      rowPerPages: [5, 10, 15],
-      employees: result == null ? void 0 : result.rows
-    }
+    data: result
   });
 }));
 var getEmployeeById = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = Number(req.params.user_id);
-  const result = yield query(
-    `
-    SELECT u.*, r.display_name AS role FROM users u
-    LEFT JOIN roles r ON u.role_id = r.id 
-    WHERE u.id=$1
-    ORDER BY id ASC
-    `,
-    [user_id]
-  );
+  const result = yield employee_service_default.GET_BY_ID(req.params.user_id);
   res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
-    data: result == null ? void 0 : result.rows.at(0)
+    data: result
   });
 }));
 var deleteEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = parseInt(req.params.user_id);
-  yield query(
-    `DELETE FROM users WHERE id=$1`,
-    [user_id]
+  yield employee_service_default.DELETE(
+    Number(req.params.user_id)
   );
   res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
-    message: `User with id ${user_id} has been deleted`
+    message: `Employee has been successfully deleted`
   });
 }));
 var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const { email, full_name, username, password, phone } = req.body;
-  const role_id = Number(req.body.role_id);
-  const result = yield query(
-    `INSERT INTO public."users" (email, full_name, username, password, role_id, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [email, full_name, username, password, role_id, phone]
-  );
+  const result = yield employee_service_default.STORE(req.body);
   res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.CREATED,
     success: true,
     message: `User is created successfully`,
-    data: result == null ? void 0 : result.rows.at(0)
+    data: result
   });
 }));
 var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
@@ -578,18 +617,14 @@ var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* (
   if (req.params.user_id) {
     user_id = Number(req.params.user_id);
   } else {
-    user_id = 1;
+    const user_id2 = req.user.id;
   }
-  const { email, full_name, username, password, role_id } = req.body;
-  const result = yield query(
-    `UPDATE public."users" SET email=$1, full_name=$2, username=$3, password=$4, role_id=$5::integer WHERE id=$6 RETURNING *`,
-    [email, full_name, username, password, role_id, user_id]
-  );
+  const result = yield employee_service_default.UPDATE(user_id, req.body);
   res.status(import_http_status_codes.StatusCodes.OK).json({
     status: import_http_status_codes.StatusCodes.OK,
     success: true,
     message: `User updated successfully`,
-    data: result == null ? void 0 : result.rows.at(0)
+    data: result
   });
 }));
 
@@ -609,7 +644,7 @@ var validateData = (schema) => {
         }, {});
         const errorResponse = {
           status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
-          message: errorMessages
+          message: "pelase fill all the input"
         };
         res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json(errorResponse);
       } else {
@@ -651,34 +686,43 @@ var import_express2 = __toESM(require("express"));
 // src/controller/task-controller.ts
 var import_http_status_codes3 = require("http-status-codes");
 
-// src/helper/functions.ts
-var calculateWorkingHours = (start, end) => {
-  const differenceInMilliseconds = end.getTime() - start.getTime();
-  const differenceInHours = differenceInMilliseconds / (1e3 * 60 * 60);
-  return differenceInHours;
+// src/services/task.service.ts
+var _TaskService = class _TaskService {
 };
-var getFullDate = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const formattedDate = `${year}-${month}-${day}`;
-  return formattedDate;
-};
-var getDailyWorkingHours = (tasks) => {
-  const dailyHours = {};
-  tasks.forEach((task) => {
-    const date = getFullDate(task.start);
-    if (!dailyHours[date]) {
-      dailyHours[date] = 0;
-    }
-    dailyHours[date] += calculateWorkingHours(task.start, task.end);
-  });
-  const option = Object.keys(dailyHours).sort();
-  const series = option.map((date) => dailyHours[date]);
-  return { option, series };
-};
-var fetchTasksByUserId = (userId, period = null) => __async(void 0, null, function* () {
-  var _a;
+_TaskService.GET_ALL = () => __async(_TaskService, null, function* () {
+  const fetchTaskResult = yield query(`
+    SELECT
+      t.id,
+      t.task,
+      u.full_name,
+      t.start,
+      t."end",
+      p.project_name
+    FROM tasks t
+    JOIN users u ON t.user_id=u.id
+    JOIN projects p ON t.project_id=p.id
+    ORDER BY start, "end" ASC
+    `);
+  return (fetchTaskResult == null ? void 0 : fetchTaskResult.rows) || [];
+});
+_TaskService.GET_BY_ID = (task_id) => __async(_TaskService, null, function* () {
+  const fetchTaskResult = yield query(`
+    SELECT
+      t.id,
+      t.task,
+      u.full_name,
+      t.start,
+      t."end",
+      p.project_name
+    FROM tasks t
+    JOIN users u ON t.user_id=u.id
+    JOIN projects p ON t.project_id=p.id
+    WHERE t.id=$1::integer
+    ORDER BY start, "end" ASC
+    `, [task_id]);
+  return fetchTaskResult == null ? void 0 : fetchTaskResult.rows.at(0);
+});
+_TaskService.GET_BY_EMPLOYEE_ID = (employee_id, period) => __async(_TaskService, null, function* () {
   let filterByPeriodStr = "";
   switch (period) {
     case "weekly":
@@ -690,67 +734,88 @@ var fetchTasksByUserId = (userId, period = null) => __async(void 0, null, functi
     default:
       break;
   }
-  const queryStr = `
-    SELECT * FROM tasks 
+  const fetchTaskResult = yield query(`
+    SELECT
+      t.id,
+      t.task,
+      u.full_name,
+      t.start,
+      t."end",
+      p.project_name
+    FROM tasks t
+    JOIN users u ON t.user_id=u.id
+    JOIN projects p ON t.project_id=p.id
     WHERE user_id=$1 
     ${filterByPeriodStr}
-    ORDER BY start, "end" ASC`;
-  const taskResult = yield query(queryStr, [userId]);
-  return (_a = taskResult == null ? void 0 : taskResult.rows) != null ? _a : [];
+    ORDER BY start, "end" ASC
+    `, [employee_id]);
+  return (fetchTaskResult == null ? void 0 : fetchTaskResult.rows) || [];
 });
+_TaskService.STORE = (user_id, tasks) => __async(_TaskService, null, function* () {
+  const q = [];
+  const params = [];
+  tasks == null ? void 0 : tasks.forEach((task, index) => {
+    const baseIndex = index * 5;
+    q.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
+    params.push(`${task.project_id}`);
+    params.push(`${task.task}`);
+    params.push(`${task.start}`);
+    params.push(`${task.end}`);
+    params.push(`${user_id}`);
+  });
+  const queryStr = `INSERT INTO tasks (project_id, task, start, "end", user_id) VALUES ` + q.join(", ") + `RETURNING *`;
+  const storeTaskResult = yield query(queryStr, params);
+  return storeTaskResult == null ? void 0 : storeTaskResult.rows;
+});
+_TaskService.UPDATE = (task_id, task) => __async(_TaskService, null, function* () {
+  const updateTaskResult = yield query(`
+    UPDATE tasks
+    SET 
+      project_id=$1,
+      task=$2,
+      start=$3,
+      "end"=$4,
+      user_id=$5
+    WHERE id=$6
+    RETURNING *
+    `, [task.project_id, task.task, task.start, task.end, task_id]);
+  return updateTaskResult == null ? void 0 : updateTaskResult.rows.at(0);
+});
+_TaskService.DELETE = (task_id) => __async(_TaskService, null, function* () {
+  yield query(`
+    DELETE FROM tasks
+    WHERE id=$1::integer
+    `, [task_id]);
+});
+var TaskService = _TaskService;
+var task_service_default = TaskService;
 
 // src/controller/task-controller.ts
 var saveTask = asyncHandler((req, res) => __async(void 0, null, function* () {
   const tasks = req.body.data;
-  const user_id = 126;
-  try {
-    yield query("BEGIN");
-    const q = [];
-    const params = [];
-    tasks == null ? void 0 : tasks.forEach((task, index) => {
-      const baseIndex = index * 5;
-      q.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
-      params.push(`${task.project_id}`);
-      params.push(`${task.task}`);
-      params.push(`${task.start}`);
-      params.push(`${task.end}`);
-      params.push(`${user_id}`);
-    });
-    const queryStr = `INSERT INTO tasks (project_id, task, start, "end", user_id) VALUES ` + q.join(", ") + `RETURNING *`;
-    const task_result = yield query(queryStr, params);
-    yield query("COMMIT");
-    const successResponse = {
-      status: import_http_status_codes3.StatusCodes.CREATED,
-      success: true,
-      message: `Report created succesfully for user ${user_id}`,
-      data: task_result == null ? void 0 : task_result.rows
-    };
-    res.status(import_http_status_codes3.StatusCodes.OK).json(successResponse);
-  } catch (error) {
-    yield query("ROLLBACK");
-    const errorResponse = {
-      status: import_http_status_codes3.StatusCodes.BAD_REQUEST,
-      message: `Something's wrong`
-    };
-    res.status(import_http_status_codes3.StatusCodes.INTERNAL_SERVER_ERROR).json(errorResponse);
-  }
+  const user_id = req.user.id;
+  const result = yield task_service_default.STORE(user_id, tasks);
+  const successResponse = {
+    status: import_http_status_codes3.StatusCodes.CREATED,
+    success: true,
+    message: `Report created succesfully for user ${user_id}`,
+    data: result
+  };
+  res.status(import_http_status_codes3.StatusCodes.OK).json(successResponse);
 }));
 var getTaskByUserId = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = 126;
-  const task_result = yield fetchTasksByUserId(user_id);
+  const employee_id = req.user.id;
+  const result = yield task_service_default.GET_BY_EMPLOYEE_ID(employee_id);
   const successResponse = {
     status: import_http_status_codes3.StatusCodes.OK,
     success: true,
-    data: task_result
+    data: result
   };
   res.status(import_http_status_codes3.StatusCodes.OK).json(successResponse);
 }));
 var deleteTask = asyncHandler((req, res) => __async(void 0, null, function* () {
   const task_id = Number(req.params.task_id);
-  yield query(
-    `DELETE FROM tasks WHERE id=$1`,
-    [task_id]
-  );
+  yield task_service_default.DELETE(task_id);
   const successResponse = {
     status: import_http_status_codes3.StatusCodes.OK,
     success: true,
@@ -783,16 +848,55 @@ var import_express3 = __toESM(require("express"));
 
 // src/controller/chart-controller.ts
 var import_http_status_codes4 = require("http-status-codes");
+
+// src/services/chart.service.ts
+var _ChartService = class _ChartService {
+};
+_ChartService.GET_DATA = (employee_id, chart_type) => __async(_ChartService, null, function* () {
+  switch (chart_type) {
+    case "pie":
+      return _ChartService.PIE_CHART(employee_id);
+    case "bar":
+      return _ChartService.BAR_CHART(employee_id);
+  }
+});
+_ChartService.PIE_CHART = (employee_id) => __async(_ChartService, null, function* () {
+  const [monthlyTasks, weeklyTasks] = yield Promise.all([
+    task_service_default.GET_BY_EMPLOYEE_ID(employee_id, "monthly"),
+    task_service_default.GET_BY_EMPLOYEE_ID(employee_id, "weekly")
+  ]);
+  const { series: monthlySeries } = getDailyWorkingHours(monthlyTasks);
+  const { series: weeklySeries } = getDailyWorkingHours(weeklyTasks);
+  const weeklyHours = weeklySeries.reduce((series, val) => {
+    return series + val;
+  }, 0);
+  const monthlyHours = monthlySeries.reduce((series, val) => {
+    return series + val;
+  }, 0);
+  return { weeklyHours, monthlyHours };
+});
+_ChartService.BAR_CHART = (employee_id) => __async(_ChartService, null, function* () {
+  const tasks = yield task_service_default.GET_BY_EMPLOYEE_ID(employee_id, "weekly");
+  const { series, option } = getDailyWorkingHours(tasks);
+  return {
+    option,
+    series
+  };
+});
+var ChartService = _ChartService;
+var chart_service_default = ChartService;
+
+// src/controller/chart-controller.ts
 var getChartData = asyncHandler((req, res) => __async(void 0, null, function* () {
   const user_id = 126;
   const model = req.params.model;
   let responseData;
   switch (model) {
     case "bar":
-      responseData = yield getBarChart(user_id);
+      responseData = yield chart_service_default.GET_DATA(user_id, "bar");
       break;
     case "pie":
-      responseData = yield getPieChart(user_id);
+      responseData = yield chart_service_default.GET_DATA(user_id, "pie");
       break;
     default:
       const errorResponse = {
@@ -809,29 +913,28 @@ var getChartData = asyncHandler((req, res) => __async(void 0, null, function* ()
   };
   res.status(import_http_status_codes4.StatusCodes.OK).json(successResponse);
 }));
-var getPieChart = (user_id) => __async(void 0, null, function* () {
-  const [monthlyTasks, weeklyTasks] = yield Promise.all([
-    fetchTasksByUserId(user_id, "monthly"),
-    fetchTasksByUserId(user_id, "weekly")
-  ]);
-  const { series: monthlySeries } = getDailyWorkingHours(monthlyTasks);
-  const { series: weeklySeries } = getDailyWorkingHours(weeklyTasks);
-  const weeklyHours = weeklySeries.reduce((series, val) => {
-    return series + val;
-  }, 0);
-  const monthlyHours = monthlySeries.reduce((series, val) => {
-    return series + val;
-  }, 0);
-  return { weeklyHours, monthlyHours };
-});
-var getBarChart = (user_id) => __async(void 0, null, function* () {
-  const tasks = yield fetchTasksByUserId(user_id, "weekly");
-  const { series, option } = getDailyWorkingHours(tasks);
-  return {
-    option,
-    series
-  };
-});
+var getDailyWorkingHours = (tasks) => {
+  const dailyHours = {};
+  tasks.forEach((task) => {
+    const date = task.start.toLocaleDateString(void 0, {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric"
+    }).split("/").join("-");
+    if (!dailyHours[date]) {
+      dailyHours[date] = 0;
+    }
+    dailyHours[date] += calculateWorkingHours(task.start, task.end);
+  });
+  const option = Object.keys(dailyHours).sort();
+  const series = option.map((date) => dailyHours[date]);
+  return { option, series };
+};
+var calculateWorkingHours = (start, end) => {
+  const differenceInMilliseconds = end.getTime() - start.getTime();
+  const differenceInHours = differenceInMilliseconds / (1e3 * 60 * 60);
+  return differenceInHours;
+};
 
 // src/route/chart-route.ts
 var route3 = import_express3.default.Router();
@@ -872,10 +975,7 @@ var login = asyncHandler((req, res) => __async(void 0, null, function* () {
   }
   const user = result == null ? void 0 : result.rows.at(0);
   const token = import_jsonwebtoken.default.sign({ user }, "test", { expiresIn: "1h" });
-  res.cookie("access_token", `${token}`, {
-    httpOnly: true,
-    secure: false
-  }).status(import_http_status_codes5.StatusCodes.OK).json({
+  res.status(import_http_status_codes5.StatusCodes.OK).json({
     status: import_http_status_codes5.StatusCodes.OK,
     success: true,
     message: "Login Successfull",
@@ -901,9 +1001,13 @@ var import_express5 = __toESM(require("express"));
 
 // src/controller/absence-controller.ts
 var import_http_status_codes6 = require("http-status-codes");
-var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const fetchAbsenceResult = yield query(
-    `SELECT
+
+// src/services/absence.service.ts
+var _AbsenceService = class _AbsenceService {
+};
+_AbsenceService.GET_ALL = () => __async(_AbsenceService, null, function* () {
+  const fetchAbsenceResult = yield query(`
+    SELECT
         u.id AS user_id,
         u.full_name AS name,
         ARRAY_AGG(
@@ -916,12 +1020,86 @@ var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* 
     JOIN users u ON a.user_id = u.id
     GROUP BY u.id, u.full_name
     ORDER BY u.id;
-    `
-  );
+    `);
+  return (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || [];
+});
+_AbsenceService.GET_BY_ID = (employee_id) => __async(_AbsenceService, null, function* () {
+  const fetchAbsenceResult = yield query(`
+    SELECT
+       *
+    FROM absences a
+    WHERE id=$1
+    `, [employee_id]);
+  return (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || [];
+});
+_AbsenceService.GET_BY_EMPLOYEE_ID = (employee_id) => __async(_AbsenceService, null, function* () {
+  const fetchAbsenceResult = yield query(`
+    SELECT
+        u.id AS user_id,
+        u.full_name AS name,
+        ARRAY_AGG(
+            JSON_BUILD_OBJECT(
+                'date', a.date,
+                'type', a.type
+            )
+        ) AS absences
+    FROM absences a
+    JOIN users u ON a.user_id = u.id
+    WHERE a.user_id = $1
+    GROUP BY u.id, u.full_name
+    ORDER BY u.id;
+    `, [employee_id]);
+  return (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || [];
+});
+_AbsenceService.STORE = (absence) => __async(_AbsenceService, null, function* () {
+  const saveAbsenceResult = yield query(`
+    INSERT INTO absences (
+      user_id, 
+      date, 
+      type
+    ) VALUES ($1::integer, $2, $3) 
+    RETURNING *
+    `, [absence.user_id, absence.date, absence.type]);
+  return saveAbsenceResult == null ? void 0 : saveAbsenceResult.rows.at(0);
+});
+_AbsenceService.UPDATE = (employee_id, absence) => __async(_AbsenceService, null, function* () {
+  const updateResult = yield query(`
+    UPDATE absences
+    SET
+      user_id=$1::integer,
+      date=$2,
+      type=$3
+    WHERE id=$4::integer
+    RETURNING *
+    `, [absence.user_id, absence.date, absence.type, employee_id]);
+  return updateResult == null ? void 0 : updateResult.rows.at(0);
+});
+_AbsenceService.DELETE = (absence_id) => __async(_AbsenceService, null, function* () {
+  yield query(`
+    DELETE FROM absences
+    WHERE id=$1::integer
+    `, [absence_id]);
+});
+_AbsenceService.APPROVAL = (absence_id, isApproved) => __async(_AbsenceService, null, function* () {
+  const updateApprovalResult = yield query(`
+    UPDATE 
+      absences 
+    SET is_approved=$1 
+    WHERE id=$2
+    RETURNING *
+    `, [isApproved, absence_id]);
+  return updateApprovalResult == null ? void 0 : updateApprovalResult.rows.at(0);
+});
+var AbsenceService = _AbsenceService;
+var absence_service_default = AbsenceService;
+
+// src/controller/absence-controller.ts
+var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const result = yield absence_service_default.GET_ALL();
   res.status(200).json({
     status: import_http_status_codes6.StatusCodes.OK,
     success: true,
-    data: (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || []
+    data: result
   });
 }));
 var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function* () {
@@ -933,43 +1111,28 @@ var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function
       message: validationError
     });
   }
-  const saveAbsenceResult = yield query(
-    `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
-    [Number(user_id), date, type]
-  );
+  const result = yield absence_service_default.STORE(req.body);
   res.json({
     status: import_http_status_codes6.StatusCodes.CREATED,
     success: true,
     message: "Absence data has been created successfully",
-    data: saveAbsenceResult == null ? void 0 : saveAbsenceResult.rows.at(0)
+    data: result
   });
 }));
 var approveAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
   const absence_id = Number(req.params.absence_id);
   const isApproved = req.body.isApproved;
-  const updateAbsenceResult = yield query(
-    `
-    UPDATE 
-      absences 
-    SET is_approved=$1 
-    WHERE id=$2
-    RETURNING *
-    `,
-    [isApproved, absence_id]
-  );
+  const result = yield absence_service_default.APPROVAL(absence_id, isApproved);
   res.json({
     status: import_http_status_codes6.StatusCodes.OK,
     success: true,
     message: `Absence data has been ${isApproved ? "approved" : "disapproved"}`,
-    data: updateAbsenceResult == null ? void 0 : updateAbsenceResult.rows.at(0)
+    data: result
   });
 }));
 var deleteAbsence = asyncHandler((req, res) => __async(void 0, null, function* () {
   const absence_id = Number(req.params.absence_id);
-  yield query(
-    `DELETE FROM absences WHERE id=$1`,
-    [absence_id]
-  );
+  yield absence_service_default.DELETE(absence_id);
   res.json({
     status: import_http_status_codes6.StatusCodes.OK,
     success: true,
@@ -977,41 +1140,40 @@ var deleteAbsence = asyncHandler((req, res) => __async(void 0, null, function* (
   });
 }));
 var validateAbsenceRequest = (user_id, date, type) => __async(void 0, null, function* () {
-  var _a, _b;
   const today = /* @__PURE__ */ new Date();
   const requestDate = new Date(date);
-  const checkQueryResult = yield query(
-    `
-    SELECT 
-      count(*)
-    FROM absences 
-    WHERE user_id=$1
-    AND date >= date_trunc('day', $2::timestamp) 
-    AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
-    AND type=$3`,
-    [user_id, date, type]
-  );
-  if (((_a = checkQueryResult == null ? void 0 : checkQueryResult.rows.at(0)) == null ? void 0 : _a.count) > 0) {
-    return `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`;
+  const options = { day: "numeric", month: "short", year: "numeric" };
+  const checkQuery = `
+    SELECT
+      COUNT(*) AS count,
+      SUM(CASE WHEN type = 'WFH' THEN 1 ELSE 0 END) AS wfh_count,
+      SUM(CASE WHEN type IN ('AL', 'SL') THEN 1 ELSE 0 END) AS al_sl_count
+    FROM absences
+    WHERE user_id = $1
+      AND date >= date_trunc('day', $2::timestamp)
+      AND date < date_trunc('day', $2::timestamp) + interval '1 day'
+  `;
+  const checkQueryResult = yield query(checkQuery, [user_id, date]);
+  const { count, wfh_count, al_sl_count } = checkQueryResult.rows[0];
+  if (count > 0) {
+    return `You already applied ${type} on ${requestDate.toLocaleDateString(void 0, options).split("/").join("-")}`;
   }
-  const checkLeavesResult = yield query(
-    `
-      SELECT 
-        count(*)
+  if (type === "WFH" && wfh_count >= 3) {
+    return `You have already reached the WFH limit for this week.`;
+  }
+  if (type === "AL" || type === "SL") {
+    const checkYearlyLimitQuery = `
+      SELECT COUNT(*)
       FROM absences
-      WHERE user_id=$1
-      AND date >= date_trunc('year', current_timestamp)
-      AND date < date_trunc('year', current_timestamp) + interval '1 year'
-      AND type='AL'
-      OR type='SL'
-    `,
-    [user_id]
-  );
-  if (((_b = checkLeavesResult == null ? void 0 : checkLeavesResult.rows.at(0)) == null ? void 0 : _b.count) >= 12) {
-    return `The user with ID ${user_id} AL and SL have reach the limit (12)`;
-  }
-  if (requestDate < today) {
-    return `The date is in the past.`;
+      WHERE user_id = $1
+        AND date >= date_trunc('year', current_timestamp)
+        AND date < date_trunc('year', current_timestamp) + interval '1 year'
+        AND type IN ('AL', 'SL')
+    `;
+    const yearlyLimitResult = yield query(checkYearlyLimitQuery, [user_id]);
+    if (yearlyLimitResult.rows[0].count >= 12) {
+      return `You have reached the annual limit of 12 AL and SL leaves.`;
+    }
   }
   const dayOfWeek = requestDate.getDay();
   if (dayOfWeek === 6 || dayOfWeek === 0) {
@@ -1051,14 +1213,63 @@ var import_express6 = __toESM(require("express"));
 
 // src/controller/project-controller.ts
 var import_http_status_codes7 = require("http-status-codes");
+
+// src/services/project.service.ts
+var _ProjectService = class _ProjectService {
+};
+_ProjectService.GET_ALL = () => __async(_ProjectService, null, function* () {
+  const fetchProjectResult = yield query(`
+    SELECT 
+      * 
+    FROM projects 
+    ORDER BY project_name
+    `);
+  return (fetchProjectResult == null ? void 0 : fetchProjectResult.rows) || [];
+});
+_ProjectService.GET_BY_ID = (project_id) => __async(_ProjectService, null, function* () {
+  const fetchProjectByIdResult = yield query(`
+    SELECT 
+      *
+    FROM projects
+    WHERE id=$1::integer
+    `, [project_id]);
+  return fetchProjectByIdResult == null ? void 0 : fetchProjectByIdResult.rows.at(0);
+});
+_ProjectService.STORE = (project) => __async(_ProjectService, null, function* () {
+  const storeProjectResult = yield query(`
+    INSERT INTO projects (
+      project_name
+    ) VALUES ($1)
+    RETURNING *
+    `, [project.project_name]);
+  return storeProjectResult == null ? void 0 : storeProjectResult.rows.at(0);
+});
+_ProjectService.UPDATE = (project_id, project) => __async(_ProjectService, null, function* () {
+  const updateProjectResult = yield query(`
+      UPDATE projects
+      SET
+        project_name=$1
+      WHERE id=$2::integer
+      RETURNING *
+    `, [project.project_name, project_id]);
+  return updateProjectResult == null ? void 0 : updateProjectResult.rows.at(0);
+});
+_ProjectService.DELETE = (project_id) => __async(_ProjectService, null, function* () {
+  yield query(`
+      DELETE FROM projects
+      WHERE id=$1::integer
+    `, [project_id]);
+});
+var ProjectService = _ProjectService;
+var project_service_default = ProjectService;
+
+// src/controller/project-controller.ts
 var getAllProject = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const fetchProjectResult = yield query(
-    `SELECT * FROM projects ORDER BY project_name`
-  );
+  const result = yield project_service_default.GET_ALL();
   res.status(import_http_status_codes7.StatusCodes.OK).json({
     status: import_http_status_codes7.StatusCodes.OK,
     success: true,
-    data: (fetchProjectResult == null ? void 0 : fetchProjectResult.rows) || []
+    data: result
   });
 }));
 var getProjectById = asyncHandler((req, res) => __async(void 0, null, function* () {
@@ -1070,59 +1281,35 @@ var getProjectById = asyncHandler((req, res) => __async(void 0, null, function* 
     };
     return res.status(import_http_status_codes7.StatusCodes.BAD_REQUEST).json(response);
   }
-  const checkProjectExsistenceResult = yield query(
-    `SELECT * FROM projects WHERE id=$1`,
-    [project_id]
-  );
-  if ((checkProjectExsistenceResult == null ? void 0 : checkProjectExsistenceResult.rowCount) < 0) {
-    const response = {
-      status: import_http_status_codes7.StatusCodes.NOT_FOUND,
-      message: `Project with ID ${project_id} not found`
-    };
-    return res.status(import_http_status_codes7.StatusCodes.NOT_FOUND).json(response);
-  }
-  const fetchProjectResult = yield query(
-    `SELECT * FROM projects ORDER BY project_name`
-  );
+  const result = yield project_service_default.GET_BY_ID(project_id);
   res.status(import_http_status_codes7.StatusCodes.OK).json({
     status: import_http_status_codes7.StatusCodes.OK,
     success: true,
-    data: fetchProjectResult == null ? void 0 : fetchProjectResult.rows.at(0)
+    data: result
   });
 }));
 var createNewProject = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const { project_name } = req.body;
-  const storeNewProjectResult = yield query(
-    `INSERT INTO projects (project_name) VALUES ($1) RETURNING *`,
-    [project_name]
-  );
+  const result = project_service_default.STORE(req.body);
   res.status(import_http_status_codes7.StatusCodes.CREATED).json({
     status: import_http_status_codes7.StatusCodes.CREATED,
     success: true,
     message: `New project successfully created`,
-    data: storeNewProjectResult == null ? void 0 : storeNewProjectResult.rows.at(0)
+    data: result
   });
 }));
 var updateProject = asyncHandler((req, res) => __async(void 0, null, function* () {
   const project_id = Number(req.params.project_id);
-  const { project_name } = req.body;
-  const updateProjectResult = yield query(
-    `UPDATE projects SET project_name=$1, WHERE id=$2 RETURNING *`,
-    [project_name, project_id]
-  );
+  const result = yield project_service_default.UPDATE(project_id, req.body);
   res.status(import_http_status_codes7.StatusCodes.OK).json({
     status: import_http_status_codes7.StatusCodes.OK,
     success: true,
     message: `Project with ID ${project_id} has been updated`,
-    data: updateProjectResult == null ? void 0 : updateProjectResult.rows.at(0)
+    data: result
   });
 }));
 var deleteProject = asyncHandler((req, res) => __async(void 0, null, function* () {
   const project_id = Number(req.params.project_id);
-  yield query(
-    `DELETE FROM projects WHERE id=$1`,
-    [project_id]
-  );
+  project_service_default.DELETE(project_id);
   res.status(import_http_status_codes7.StatusCodes.OK).json({
     status: import_http_status_codes7.StatusCodes.OK,
     success: true,
@@ -1144,28 +1331,66 @@ var import_express7 = __toESM(require("express"));
 
 // src/controller/role-controller.ts
 var import_http_status_codes8 = require("http-status-codes");
+
+// src/services/role.service.ts
+var _RoleService = class _RoleService {
+};
+_RoleService.GET_ALL = () => __async(_RoleService, null, function* () {
+  const fethAllRoleResult = yield query(`
+    SELECT 
+      *
+    FROM roles
+    SORT BY role_name
+    `);
+  return (fethAllRoleResult == null ? void 0 : fethAllRoleResult.rows) || [];
+});
+_RoleService.GET_BY_ID = (role_id) => __async(_RoleService, null, function* () {
+  const fetchRoleById = yield query(`
+    SELECT
+      role_name,
+      display_name
+    FROM roles
+    WHERE id=$1::integer
+    `, [role_id]);
+  return fetchRoleById == null ? void 0 : fetchRoleById.rows.at(0);
+});
+_RoleService.STORE = (role) => __async(_RoleService, null, function* () {
+  const storeRoleResult = yield query(`
+    INSERT INTO roles (
+      role_name,
+      display_name
+    ) VALUES ($1, $2)
+    RETURNING *
+    `, [role.role_name, role.display_name]);
+  return storeRoleResult == null ? void 0 : storeRoleResult.rows.at(0);
+});
+_RoleService.UPDATE = (role_id, role) => __async(_RoleService, null, function* () {
+  const updateRoleResult = yield query(`
+    UPDATE roles
+    SET
+      role_name=$1,
+      display_name=$2
+    WHERE id=$3
+    RETURNING *
+    `, [role.role_name, role.display_name, role_id]);
+  return updateRoleResult == null ? void 0 : updateRoleResult.rows.at(0);
+});
+_RoleService.DELETE = (role_id) => __async(_RoleService, null, function* () {
+  const deleteRoleResult = yield query(`
+    DELETE roles
+    WHERE id=$1
+    `, [role_id]);
+});
+var RoleService = _RoleService;
+var role_service_default = RoleService;
+
+// src/controller/role-controller.ts
 var getAllRole = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const fetchRoleResult = yield query(
-    `
-      SELECT
-          r.id,
-          r.role_name,
-          r.display_name,
-          COUNT(u.id) AS total_users
-      FROM
-          roles r
-      LEFT JOIN
-          users u
-      ON
-          r.id = u.role_id
-      GROUP BY
-          r.id, r.role_name, r.display_name
-    `
-  );
+  const result = yield role_service_default.GET_ALL();
   res.status(import_http_status_codes8.StatusCodes.OK).json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,
-    data: (fetchRoleResult == null ? void 0 : fetchRoleResult.rows) || []
+    data: result
   });
 }));
 var getRoleById = asyncHandler((req, res) => __async(void 0, null, function* () {
@@ -1177,49 +1402,38 @@ var getRoleById = asyncHandler((req, res) => __async(void 0, null, function* () 
     };
     return res.status(import_http_status_codes8.StatusCodes.BAD_REQUEST).json(response);
   }
-  const checkRoleExistenceResult = yield query(
-    `SELECT * FROM roles WHERE id=$1`,
-    [role_id]
-  );
+  const result = yield role_service_default.GET_BY_ID(role_id);
   res.status(import_http_status_codes8.StatusCodes.OK).json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,
-    data: checkRoleExistenceResult == null ? void 0 : checkRoleExistenceResult.rows.at(0)
+    data: result
   });
 }));
 var createNewRole = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const { display_name, role_name } = req.body;
-  const storeNewRoleResult = yield query(
-    `INSERT INTO roles (display_name, role_name) VALUES ($1, $2) RETURNING *`,
-    [display_name, role_name]
-  );
+  const result = role_service_default.STORE(req.body);
   res.status(import_http_status_codes8.StatusCodes.CREATED).json({
     status: import_http_status_codes8.StatusCodes.CREATED,
     success: true,
     message: `New role successfully created`,
-    data: storeNewRoleResult == null ? void 0 : storeNewRoleResult.rows.at(0)
+    data: result
   });
 }));
 var updateRole = asyncHandler((req, res) => __async(void 0, null, function* () {
   const role_id = Number(req.params.role_id);
-  const { display_name, role_name } = req.body;
-  const updateRoleResult = yield query(
-    `UPDATE roles SET display_name=$1, role_name=$2 WHERE id=$3 RETURNING *`,
-    [display_name, role_name, role_id]
+  const result = role_service_default.UPDATE(
+    role_id,
+    req.body
   );
   res.status(import_http_status_codes8.StatusCodes.OK).json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,
     message: `Role with ID ${role_id} has been updated`,
-    data: updateRoleResult == null ? void 0 : updateRoleResult.rows.at(0)
+    data: result
   });
 }));
 var deleteRole = asyncHandler((req, res) => __async(void 0, null, function* () {
   const role_id = Number(req.params.role_id);
-  yield query(
-    `DELETE FROM projects WHERE id=$1`,
-    [role_id]
-  );
+  role_service_default.DELETE(role_id);
   res.status(import_http_status_codes8.StatusCodes.OK).json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,

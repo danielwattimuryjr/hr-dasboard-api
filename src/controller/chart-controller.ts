@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
-import { ErrorResponse, SuccessResponse } from "../types";
+import { ErrorResponse, SuccessResponse, Task } from "../types";
 import { StatusCodes } from "http-status-codes";
-import { fetchTasksByUserId, getDailyWorkingHours } from "../helper/functions";
+import ChartService from "../services/chart.service";
 
 type PieChartResponse = {
   weeklyHours: number;
@@ -24,10 +24,10 @@ export const getChartData = asyncHandler(async (req: Request, res: Response) => 
 
   switch (model) {
     case "bar":
-      responseData = await getBarChart(user_id);
+      responseData = await ChartService.GET_DATA(user_id, 'bar');
       break;
     case "pie":
-      responseData = await getPieChart(user_id);
+      responseData = await ChartService.GET_DATA(user_id, 'pie');
       break;
     default:
       const errorResponse: ErrorResponse = {
@@ -48,34 +48,36 @@ export const getChartData = asyncHandler(async (req: Request, res: Response) => 
   res.status(StatusCodes.OK).json(successResponse);
 })
 
-const getPieChart = async (user_id: number) => {
-  const [monthlyTasks, weeklyTasks] = await Promise.all([
-    fetchTasksByUserId(user_id, "monthly"),
-    fetchTasksByUserId(user_id, "weekly")
-  ]);
+export const getDailyWorkingHours = (tasks: Task[]) => {
+  const dailyHours: { [key: string]: number } = {};
 
-  const { series: monthlySeries } = getDailyWorkingHours(monthlyTasks);
-  const { series: weeklySeries } = getDailyWorkingHours(weeklyTasks);
+  tasks.forEach((task) => {
+    const date = task.start.toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric"
+    }).split('/').join('-');
 
+    if (!dailyHours[date]) {
+      dailyHours[date] = 0;
+    }
+    dailyHours[date] += calculateWorkingHours(task.start, task.end);
+  });
 
-  const weeklyHours = weeklySeries.reduce((series, val) => {
-    return series + val
-  }, 0)
+  const option = Object.keys(dailyHours).sort();
+  const series = option.map(date => dailyHours[date]);
 
-  const monthlyHours = monthlySeries.reduce((series, val) => {
-    return series + val
-  }, 0)
-
-  return { weeklyHours, monthlyHours }
+  return { option, series }
 }
 
-const getBarChart = async (user_id: number) => {
-  const tasks = await fetchTasksByUserId(user_id, "weekly")
+const calculateWorkingHours = (start: Date, end: Date): number => {
+  // if (start >= end) {
+  //   throw new Error('End time must be after start time');
+  // }
 
-  const { series, option } = getDailyWorkingHours(tasks);
+  const differenceInMilliseconds = end.getTime() - start.getTime();
 
-  return {
-    option,
-    series
-  }
-}
+  const differenceInHours = differenceInMilliseconds / (1000 * 60 * 60);
+
+  return differenceInHours;
+};

@@ -1,13 +1,10 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
-import { ErrorResponse, SuccessResponse } from "../types";
+import { ErrorResponse, Project, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
+import ProjectService from "../services/project.service";
 
-type Project = {
-  id?: number;
-  project_name: string;
-}
 
 type ProjectResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 type ProjectRequest = Request<{ project_id?: number }, any, {
@@ -15,14 +12,12 @@ type ProjectRequest = Request<{ project_id?: number }, any, {
 }>
 
 const getAllProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<Project[]>) => {
-  const fetchProjectResult = await query<Project>(
-    `SELECT * FROM projects ORDER BY project_name`
-  )
+  const result = await ProjectService.GET_ALL()
 
   res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
-    data: fetchProjectResult?.rows || []
+    data: result
   })
 })
 
@@ -38,71 +33,43 @@ const getProjectById = asyncHandler(async (req: ProjectRequest, res: ProjectResp
     return res.status(StatusCodes.BAD_REQUEST).json(response)
   }
 
-  const checkProjectExsistenceResult = await query<Project>(
-    `SELECT * FROM projects WHERE id=$1`,
-    [project_id]
-  )
-
-  if (checkProjectExsistenceResult?.rowCount < 0) {
-    const response: ErrorResponse = {
-      status: StatusCodes.NOT_FOUND,
-      message: `Project with ID ${project_id} not found`
-    }
-
-    return res.status(StatusCodes.NOT_FOUND).json(response)
-  }
-
-  const fetchProjectResult = await query<Project>(
-    `SELECT * FROM projects ORDER BY project_name`
-  )
+  const result = await ProjectService.GET_BY_ID(project_id)
 
   res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
-    data: fetchProjectResult?.rows.at(0)
+    data: result
   })
 })
 
 const createNewProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<Project>) => {
-  const { project_name } = req.body
-
-  const storeNewProjectResult = await query<Project>(
-    `INSERT INTO projects (project_name) VALUES ($1) RETURNING *`,
-    [project_name]
-  )
+  const result = ProjectService.STORE(req.body)
 
   res.status(StatusCodes.CREATED).json({
     status: StatusCodes.CREATED,
     success: true,
     message: `New project successfully created`,
-    data: storeNewProjectResult?.rows.at(0)
+    data: result
   })
 })
 
 const updateProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<Project>) => {
   const project_id = Number(req.params.project_id);
-  const { project_name } = req.body
 
-  const updateProjectResult = await query<Project>(
-    `UPDATE projects SET project_name=$1, WHERE id=$2 RETURNING *`,
-    [project_name, project_id]
-  )
+  const result = await ProjectService.UPDATE(project_id, req.body)
 
   res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
     message: `Project with ID ${project_id} has been updated`,
-    data: updateProjectResult?.rows.at(0)
+    data: result
   })
 })
 
 const deleteProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<null>) => {
   const project_id = Number(req.params.project_id);
 
-  await query(
-    `DELETE FROM projects WHERE id=$1`,
-    [project_id]
-  )
+  ProjectService.DELETE(project_id)
 
   res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,

@@ -54,15 +54,17 @@ export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<s
 
   const token = jwt.sign({ user }, 'test', { expiresIn: '1h' })
 
-  res.cookie("access_token", `${token}`, {
-    httpOnly: true,
-    secure: false
-  }).status(StatusCodes.OK).json({
-    status: StatusCodes.OK,
-    success: true,
-    message: "Login Successfull",
-    data: token
-  });
+  res
+    // .cookie("access_token", `${token}`, {
+    //   httpOnly: true,
+    //   secure: false
+    // })
+    .status(StatusCodes.OK).json({
+      status: StatusCodes.OK,
+      success: true,
+      message: "Login Successfull",
+      data: token
+    });
 })
 
 export const logout = (req: LoginRequest, res: LoginResponse<undefined>) => {

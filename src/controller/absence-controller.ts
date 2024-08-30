@@ -3,7 +3,7 @@ import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
-import { boolean } from "zod";
+import AbsenceService from "../services/absence.service";
 
 type AbsenceItem = {
   user_id?: number;
@@ -23,28 +23,13 @@ type AbsenceResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 
 // @desc  Get all absence for all user
 // @route GET /api/absences
-const getAbsenceData = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<AbsenceItem[]>) => {
-  const fetchAbsenceResult = await query<AbsenceItem>(
-    `SELECT
-        u.id AS user_id,
-        u.full_name AS name,
-        ARRAY_AGG(
-            JSON_BUILD_OBJECT(
-                'date', a.date,
-                'type', a.type
-            )
-        ) AS absences
-    FROM absences a
-    JOIN users u ON a.user_id = u.id
-    GROUP BY u.id, u.full_name
-    ORDER BY u.id;
-    `
-  );
+const getAbsenceData = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<any>) => {
+  const result = await AbsenceService.GET_ALL()
 
   res.status(200).json({
     status: StatusCodes.OK,
     success: true,
-    data: fetchAbsenceResult?.rows || []
+    data: result
   })
 });
 
@@ -61,16 +46,13 @@ const createNewAbsence = asyncHandler(async (req: AbsenceRequest, res: AbsenceRe
     } as ErrorResponse)
   }
 
-  const saveAbsenceResult = await query(
-    `INSERT INTO absences (user_id, date, type) VALUES ($1, $2, $3) RETURNING *`,
-    [Number(user_id), date, type]
-  );
+  const result = await AbsenceService.STORE(req.body)
 
   res.json({
     status: StatusCodes.CREATED,
     success: true,
     message: "Absence data has been created successfully",
-    data: saveAbsenceResult?.rows.at(0)
+    data: result
   })
 })
 
@@ -80,38 +62,20 @@ const approveAbsenceData = asyncHandler(async (req: Request<{ absence_id: number
   const absence_id = Number(req.params.absence_id)
   const isApproved = req.body.isApproved
 
-  const updateAbsenceResult = await query<{
-    id: number;
-    user_id: number;
-    date: Date;
-    type: 'WFH' | 'AL' | 'SL';
-    isApproved: boolean
-  }>(
-    `
-    UPDATE 
-      absences 
-    SET is_approved=$1 
-    WHERE id=$2
-    RETURNING *
-    `,
-    [isApproved, absence_id]
-  )
+  const result = await AbsenceService.APPROVAL(absence_id, isApproved)
 
   res.json({
     status: StatusCodes.OK,
     success: true,
     message: `Absence data has been ${isApproved ? 'approved' : 'disapproved'}`,
-    data: updateAbsenceResult?.rows.at(0)
+    data: result
   })
 })
 
 const deleteAbsence = asyncHandler(async (req: Request, res: Response) => {
   const absence_id = Number(req.params.absence_id);
 
-  await query(
-    `DELETE FROM absences WHERE id=$1`,
-    [absence_id]
-  )
+  await AbsenceService.DELETE(absence_id)
 
   res.json({
     status: StatusCodes.OK,
@@ -127,43 +91,49 @@ const validateAbsenceRequest = async (
 ) => {
   const today = new Date()
   const requestDate = new Date(date)
+  const options = { day: 'numeric', month: 'short', year: 'numeric' };
 
-  const checkQueryResult = await query<{ count: number }>(
-    `
-    SELECT 
-      count(*)
-    FROM absences 
-    WHERE user_id=$1
-    AND date >= date_trunc('day', $2::timestamp) 
-    AND date < date_trunc('day', $2::timestamp) + interval '1 day' 
-    AND type=$3`,
-    [user_id, date, type]
-  )
+  const checkQuery = `
+    SELECT
+      COUNT(*) AS count,
+      SUM(CASE WHEN type = 'WFH' THEN 1 ELSE 0 END) AS wfh_count,
+      SUM(CASE WHEN type IN ('AL', 'SL') THEN 1 ELSE 0 END) AS al_sl_count
+    FROM absences
+    WHERE user_id = $1
+      AND date >= date_trunc('day', $2::timestamp)
+      AND date < date_trunc('day', $2::timestamp) + interval '1 day'
+  `;
 
-  if (checkQueryResult?.rows.at(0)?.count > 0) {
-    return `Duplicated entry! User with ID ${user_id} already have ${type} at ${date}.`
+  const checkQueryResult = await query<{
+    count: number;
+    wfh_count: number;
+    al_sl_count: number;
+  }>(checkQuery, [user_id, date]);
+
+  const { count, wfh_count, al_sl_count } = checkQueryResult.rows[0];
+
+  if (count > 0) {
+    return `You already applied ${type} on ${requestDate.toLocaleDateString(undefined, options).split('/').join('-')}`;
   }
 
-  const checkLeavesResult = await query<{ count: number }>(
-    `
-      SELECT 
-        count(*)
+  if (type === 'WFH' && wfh_count >= 3) {
+    return `You have already reached the WFH limit for this week.`;
+  }
+
+  if (type === 'AL' || type === 'SL') {
+    const checkYearlyLimitQuery = `
+      SELECT COUNT(*)
       FROM absences
-      WHERE user_id=$1
-      AND date >= date_trunc('year', current_timestamp)
-      AND date < date_trunc('year', current_timestamp) + interval '1 year'
-      AND type='AL'
-      OR type='SL'
-    `,
-    [user_id]
-  )
+      WHERE user_id = $1
+        AND date >= date_trunc('year', current_timestamp)
+        AND date < date_trunc('year', current_timestamp) + interval '1 year'
+        AND type IN ('AL', 'SL')
+    `;
+    const yearlyLimitResult = await query<{ count: number }>(checkYearlyLimitQuery, [user_id]);
 
-  if (checkLeavesResult?.rows.at(0)?.count >= 12) {
-    return `The user with ID ${user_id} AL and SL have reach the limit (12)`
-  }
-
-  if (requestDate < today) {
-    return `The date is in the past.`
+    if (yearlyLimitResult.rows[0].count >= 12) {
+      return `You have reached the annual limit of 12 AL and SL leaves.`;
+    }
   }
 
   const dayOfWeek = requestDate.getDay();
