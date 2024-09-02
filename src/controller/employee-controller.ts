@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
-import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
 import { Employee, ErrorResponse, SuccessResponse } from "../types";
-import EmployeeService from "../services/employee.service";
+import EmployeeService from "../services/employee-service";
 
 
 type EmployeeResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
@@ -14,7 +13,6 @@ type EmployeeRequest = Request<{ user_id: number }, any, Employee, {
 }>
 
 export const getAllEmployessClient = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee[]>) => {
-
   const test = await EmployeeService.GET_ALL();
 
   res.json(test)
@@ -84,15 +82,8 @@ export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: Emp
 
 // @desc Update Current User Profile
 // @route PUT /api/employees
-export const updateProfile = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
-  let user_id: number = 0;
-
-  if (req.params.user_id) {
-    user_id = Number(req.params.user_id);
-  } else {
-    const user_id = req.user.id;
-    // user_id = 1;
-  }
+export const updateEmployee = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
+  const user_id = Number(req.params.user_id);
 
   const result = await EmployeeService.UPDATE(user_id, req.body)
 

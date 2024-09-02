@@ -18,8 +18,9 @@
 // };
 
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { query } from '../libs/pg';
+import { Employee } from '../types';
 
 export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
   // Mengambil token dari header Authorization
@@ -36,18 +37,8 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const decoded = jwt.verify(token, 'test');
-    console.log(decoded);
-    const { user } = decoded as {
-      user: {
-        id: number;
-        email: string;
-        full_name: string;
-        username: string;
-        role_name: string;
-        display_name: string;
-      }
-    }
+    const decoded = jwt.verify(token, 'test') as JwtPayload & { user: Employee };
+    const { user } = decoded;
 
     const checkQuery = await query<{ id: number; }>(
       `
@@ -58,11 +49,11 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
       [user.email]
     )
 
-    if (checkQuery.rowCount === 0) {
+    if (checkQuery?.rowCount === 0) {
       return res.status(401).json({ message: 'User does not exist' });
     }
 
-    req.user = decoded;
+    req.user = user;
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Invalid token' });

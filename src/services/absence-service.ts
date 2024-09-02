@@ -10,7 +10,8 @@ class AbsenceService {
         ARRAY_AGG(
             JSON_BUILD_OBJECT(
                 'date', a.date,
-                'type', a.type
+                'type', a.type,
+                'is_approved', a.is_approved
             )
         ) AS absences
     FROM absences a
@@ -36,19 +37,11 @@ class AbsenceService {
   static GET_BY_EMPLOYEE_ID = async (employee_id: number) => {
     const fetchAbsenceResult = await query<any>(`
     SELECT
-        u.id AS user_id,
-        u.full_name AS name,
-        ARRAY_AGG(
-            JSON_BUILD_OBJECT(
-                'date', a.date,
-                'type', a.type
-            )
-        ) AS absences
-    FROM absences a
-    JOIN users u ON a.user_id = u.id
-    WHERE a.user_id = $1
-    GROUP BY u.id, u.full_name
-    ORDER BY u.id;
+      date,
+      type,
+      is_approved
+    FROM absences
+    WHERE user_id = $1::integer
     `, [employee_id]);
 
     return fetchAbsenceResult?.rows || [];

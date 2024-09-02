@@ -13,7 +13,7 @@ class RoleService {
     return fethAllRoleResult?.rows || []
   }
 
-  static GET_BY_ID = async (role_id: number): Promise<Role | undefined> => {
+  static GET_BY_ID = async (role_id: number) => {
     const fetchRoleById = await query<Role>(`
     SELECT
       role_name,
@@ -25,8 +25,8 @@ class RoleService {
     return fetchRoleById?.rows.at(0)
   }
 
-  static STORE = async (role: Role): Promise<Role | undefined> => {
-    const storeRoleResult = await query(`
+  static STORE = async (role: Role) => {
+    const storeRoleResult = await query<Role>(`
     INSERT INTO roles (
       role_name,
       display_name
@@ -37,7 +37,7 @@ class RoleService {
     return storeRoleResult?.rows.at(0)
   }
 
-  static UPDATE = async (role_id: number, role: Role): Promise<Role | undefined> => {
+  static UPDATE = async (role_id: number, role: Role) => {
     const updateRoleResult = await query(`
     UPDATE roles
     SET

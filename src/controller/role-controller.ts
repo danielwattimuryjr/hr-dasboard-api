@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, Role, SuccessResponse } from "../types";
 import { StatusCodes } from "http-status-codes";
-import RoleService from "../services/role.service";
+import RoleService from "../services/role-service";
+// import RoleService from "../services/role-service";
 
 type RoleResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 type RoleRequest = Request<{ role_id?: number }, any, {

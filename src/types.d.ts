@@ -1,3 +1,13 @@
+import * as express from 'express';
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: Employee
+    }
+  }
+}
+
 export type ErrorResponse = {
   status: number;
   message?: string;
@@ -52,6 +62,11 @@ export type Absence = {
   date: Date;
   type: 'WFH' | 'AL' | 'SL';
   isApproved?: boolean;
+}
+
+export type Login = {
+  email: string;
+  password: string;
 }
 
 export type Period = "weekly" | "monthly" | null;

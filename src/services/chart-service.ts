@@ -1,5 +1,5 @@
 import { getDailyWorkingHours } from "../controller/chart-controller";
-import TaskService from "./task.service";
+import TaskService from "./task-service";
 
 class ChartService {
   static GET_DATA = async (employee_id: number, chart_type: 'pie' | 'bar') => {

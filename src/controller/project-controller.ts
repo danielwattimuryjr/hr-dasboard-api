@@ -3,7 +3,7 @@ import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, Project, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
-import ProjectService from "../services/project.service";
+import ProjectService from "../services/project-service";
 
 
 type ProjectResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, SuccessResponse, Task } from "../types";
 import { StatusCodes } from "http-status-codes";
-import ChartService from "../services/chart.service";
+import ChartService from "../services/chart-service";
 
 type PieChartResponse = {
   weeklyHours: number;
@@ -17,8 +17,15 @@ type BarChartResponse = {
 // @desc  Get required data for the bar chart
 // @route GET /api/charts/:model
 export const getChartData = asyncHandler(async (req: Request, res: Response) => {
-  const user_id = 126;
+  const user_id = req.user?.id;
   const model: string = req.params.model;
+
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    } as ErrorResponse)
+  }
 
   let responseData;
 

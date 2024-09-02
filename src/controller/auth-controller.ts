@@ -2,45 +2,16 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
-import { ErrorResponse, SuccessResponse } from "../types";
+import { ErrorResponse, Login, SuccessResponse } from "../types";
 import jwt from "jsonwebtoken"
+import AuthService from "../services/auth-service";
 
-type User = {
-  id?: number;
-  email: string;
-  full_name: string;
-  username: string;
-  role_name: string;
-  display_name: string;
-}
-
-type LoginRequest = Request<{}, any, {
-  email?: string;
-  password?: string;
-}>
+type LoginRequest = Request<{}, any, Login>
 type LoginResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 
 
 export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<string>) => {
-  const { email, password } = req.body;
-
-  const result = await query<User>(
-    `
-      SELECT 
-        u.id, 
-        u.email, 
-        u.full_name, 
-        u.username, 
-        r.role_name, 
-        r.display_name
-      FROM 
-        public."users" u
-      JOIN 
-        roles r ON u.role_id = r.id
-      WHERE 
-        u.email=$1 AND u.password=$2`,
-    [email, password]
-  )
+  const result = await AuthService.LOGIN(req.body)
 
   if (result?.rowCount < 1) {
     const errorResponse: ErrorResponse = {

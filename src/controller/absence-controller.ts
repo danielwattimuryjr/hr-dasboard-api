@@ -3,7 +3,7 @@ import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
-import AbsenceService from "../services/absence.service";
+import AbsenceService from "../services/absence-service";
 
 type AbsenceItem = {
   user_id?: number;
@@ -24,7 +24,30 @@ type AbsenceResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 // @desc  Get all absence for all user
 // @route GET /api/absences
 const getAbsenceData = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<any>) => {
+  const user_id = req.user?.id
+
   const result = await AbsenceService.GET_ALL()
+  // const result = await AbsenceService.GET_BY_EMPLOYEE_ID(user_id)
+
+  res.status(200).json({
+    status: StatusCodes.OK,
+    success: true,
+    data: result
+  })
+});
+
+const getAbsenceDataTest = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<any>) => {
+  const user_id = req.user?.id
+
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    } as ErrorResponse)
+  }
+
+  // const result = await AbsenceService.GET_ALL()
+  const result = await AbsenceService.GET_BY_EMPLOYEE_ID(user_id)
 
   res.status(200).json({
     status: StatusCodes.OK,
@@ -146,6 +169,7 @@ const validateAbsenceRequest = async (
 
 export {
   getAbsenceData,
+  getAbsenceDataTest,
   createNewAbsence,
   approveAbsenceData,
   deleteAbsence,

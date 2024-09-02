@@ -3,7 +3,7 @@ import { query } from "../libs/pg";
 import { ErrorResponse, SuccessResponse, Task } from "../types";
 import { StatusCodes } from "http-status-codes";
 import { asyncHandler } from "../helper/async-helper";
-import TaskService from "../services/task.service";
+import TaskService from "../services/task-service";
 
 type TaskRequest = Request<{}, SuccessResponse<Task[]>, {
   data: Task[]
@@ -13,8 +13,14 @@ type TaskRequest = Request<{}, SuccessResponse<Task[]>, {
 // @route POST /api/tasks/
 export const saveTask = asyncHandler(async (req: TaskRequest, res: Response) => {
   const tasks = req.body.data;
-  const user_id = req.user.id;
-  // const user_id = 126;
+  const user_id = req.user?.id;
+
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    } as ErrorResponse)
+  }
 
   const result = await TaskService.STORE(user_id, tasks)
 
@@ -31,7 +37,14 @@ export const saveTask = asyncHandler(async (req: TaskRequest, res: Response) => 
 // @desc  Get all tasks for a certain user
 // @route GET /api/tasks/
 export const getTaskByUserId = asyncHandler(async (req: TaskRequest, res: Response) => {
-  const employee_id = req.user.id;
+  const employee_id = req.user?.id;
+
+  if (!employee_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    } as ErrorResponse)
+  }
   // const user_id = 126
 
   const result = await TaskService.GET_BY_EMPLOYEE_ID(employee_id);

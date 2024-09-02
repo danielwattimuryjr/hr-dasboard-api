@@ -2,13 +2,7 @@ import 'dotenv/config'
 require('dotenv').config()
 
 import express from "express";
-import employeeRouter from "./route/employee-route";
-import taskRouter from "./route/task-route";
-import chartRouter from "./route/chart-route";
-import authRouter from "./route/auth-route";
-import absenceRoute from "./route/absence-route";
-import projectRoute from "./route/project-route";
-import roleRoute from "./route/role-route";
+
 import cors from "cors"
 import helmet from "helmet";
 import db from "./libs/pg"
@@ -16,6 +10,16 @@ import { notFoundHandler } from "./error/not-found";
 import { errorHandler } from "./error/error";
 import { verifyToken } from './middleware/token-middleware';
 import cookieParser from 'cookie-parser';
+import {
+  absenceRoute,
+  authRouter,
+  chartRouter,
+  employeeRouter,
+  profileRoute,
+  projectRoute,
+  roleRoute,
+  taskRouter
+} from './route';
 
 const asyncHandler = async () => {
   await db.connect()
@@ -34,9 +38,9 @@ const asyncHandler = async () => {
   app.use('/api/auth/', authRouter)
   app.use('/api/employees/', employeeRouter)
   app.use('/api/tasks/', taskRouter)
-  // app.use('/api/charts/', verifyToken, chartRouter)
-  app.use('/api/charts/', chartRouter)
-  app.use('/api/absences/', absenceRoute)
+  app.use('/api/charts/', verifyToken, chartRouter)
+  // app.use('/api/profiles/', verifyToken, profileRoute)
+  app.use('/api/absences/', verifyToken, absenceRoute)
   app.use('/api/projects/', projectRoute)
   app.use('/api/roles/', roleRoute)
 

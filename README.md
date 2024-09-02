@@ -534,6 +534,37 @@
 </details>
 
 <details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/absences/history</b></code> <code>(Get absences data for the current logged in user)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": [
+    {
+      "date": "2024-08-26T00:00:00.000Z",
+      "type": "WFH",
+      "is_approved": null
+    },
+    {
+      "date": "2024-08-27T00:00:00.000Z",
+      "type": "WFH",
+      "is_approved": null
+    },
+    {
+      "date": "2024-08-28T00:00:00.000Z",
+      "type": "WFH",
+      "is_approved": null
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
  <summary><code>POST</code> <code><b>192.168.18.30:3000/api/absences</b></code> <code>(Add new absences data for an employee)</code></summary>
 
 ##### Request

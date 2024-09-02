@@ -399,20 +399,9 @@ var require_lib = __commonJS({
 
 // src/server.ts
 var import_config = require("dotenv/config");
-var import_express8 = __toESM(require("express"));
-
-// src/route/employee-route.ts
-var import_express = __toESM(require("express"));
-
-// src/helper/async-helper.ts
-var asyncHandler = (asyncFnc) => {
-  return (req, res, next) => {
-    Promise.resolve(asyncFnc(req, res)).catch(next);
-  };
-};
-
-// src/controller/employee-controller.ts
-var import_http_status_codes = require("http-status-codes");
+var import_express9 = __toESM(require("express"));
+var import_cors = __toESM(require_lib());
+var import_helmet = __toESM(require("helmet"));
 
 // src/libs/pg.ts
 var import_pg = require("pg");
@@ -465,7 +454,76 @@ var disconnect = () => __async(void 0, null, function* () {
 });
 var pg_default = { connect, disconnect };
 
-// src/services/employee.service.ts
+// src/error/not-found.ts
+var import_http_status_codes = require("http-status-codes");
+var notFoundHandler = (req, res) => {
+  const response = {
+    status: import_http_status_codes.StatusCodes.NOT_FOUND,
+    message: `Not found: ${req.originalUrl}`
+  };
+  res.status(404).json(response);
+};
+
+// src/error/error.ts
+var import_http_status_codes2 = require("http-status-codes");
+var errorHandler = (error, req, res, next) => {
+  const response = {
+    status: import_http_status_codes2.StatusCodes.INTERNAL_SERVER_ERROR,
+    message: error.message
+  };
+  console.log(error);
+  return res.status(import_http_status_codes2.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
+};
+
+// src/middleware/token-middleware.ts
+var import_jsonwebtoken = __toESM(require("jsonwebtoken"));
+var verifyToken = (req, res, next) => __async(void 0, null, function* () {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+  const token = authHeader;
+  if (!token) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+  try {
+    const decoded = import_jsonwebtoken.default.verify(token, "test");
+    const { user } = decoded;
+    const checkQuery = yield query(
+      `
+    SELECT id
+    FROM public."users"
+    WHERE email=$1
+    `,
+      [user.email]
+    );
+    if ((checkQuery == null ? void 0 : checkQuery.rowCount) === 0) {
+      return res.status(401).json({ message: "User does not exist" });
+    }
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+});
+
+// src/server.ts
+var import_cookie_parser = __toESM(require("cookie-parser"));
+
+// src/route/employee-route.ts
+var import_express = __toESM(require("express"));
+
+// src/helper/async-helper.ts
+var asyncHandler = (asyncFnc) => {
+  return (req, res, next) => {
+    Promise.resolve(asyncFnc(req, res)).catch(next);
+  };
+};
+
+// src/controller/employee-controller.ts
+var import_http_status_codes3 = require("http-status-codes");
+
+// src/services/employee-service.ts
 var _EmployeeService = class _EmployeeService {
 };
 _EmployeeService.GET_ALL = (limit, currentPage, searchStr) => __async(_EmployeeService, null, function* () {
@@ -579,16 +637,16 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
     currentPage,
     searchStr
   );
-  res.status(import_http_status_codes.StatusCodes.OK).json({
-    status: import_http_status_codes.StatusCodes.OK,
+  res.status(import_http_status_codes3.StatusCodes.OK).json({
+    status: import_http_status_codes3.StatusCodes.OK,
     success: true,
     data: result
   });
 }));
 var getEmployeeById = asyncHandler((req, res) => __async(void 0, null, function* () {
   const result = yield employee_service_default.GET_BY_ID(req.params.user_id);
-  res.status(import_http_status_codes.StatusCodes.OK).json({
-    status: import_http_status_codes.StatusCodes.OK,
+  res.status(import_http_status_codes3.StatusCodes.OK).json({
+    status: import_http_status_codes3.StatusCodes.OK,
     success: true,
     data: result
   });
@@ -597,31 +655,26 @@ var deleteEmployee = asyncHandler((req, res) => __async(void 0, null, function* 
   yield employee_service_default.DELETE(
     Number(req.params.user_id)
   );
-  res.status(import_http_status_codes.StatusCodes.OK).json({
-    status: import_http_status_codes.StatusCodes.OK,
+  res.status(import_http_status_codes3.StatusCodes.OK).json({
+    status: import_http_status_codes3.StatusCodes.OK,
     success: true,
     message: `Employee has been successfully deleted`
   });
 }));
 var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
   const result = yield employee_service_default.STORE(req.body);
-  res.status(import_http_status_codes.StatusCodes.OK).json({
-    status: import_http_status_codes.StatusCodes.CREATED,
+  res.status(import_http_status_codes3.StatusCodes.OK).json({
+    status: import_http_status_codes3.StatusCodes.CREATED,
     success: true,
     message: `User is created successfully`,
     data: result
   });
 }));
-var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
-  let user_id = 0;
-  if (req.params.user_id) {
-    user_id = Number(req.params.user_id);
-  } else {
-    const user_id2 = req.user.id;
-  }
+var updateEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const user_id = Number(req.params.user_id);
   const result = yield employee_service_default.UPDATE(user_id, req.body);
-  res.status(import_http_status_codes.StatusCodes.OK).json({
-    status: import_http_status_codes.StatusCodes.OK,
+  res.status(import_http_status_codes3.StatusCodes.OK).json({
+    status: import_http_status_codes3.StatusCodes.OK,
     success: true,
     message: `User updated successfully`,
     data: result
@@ -630,7 +683,7 @@ var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* (
 
 // src/middleware/validation-middleware.ts
 var import_zod = require("zod");
-var import_http_status_codes2 = require("http-status-codes");
+var import_http_status_codes4 = require("http-status-codes");
 var validateData = (schema) => {
   return (req, res, next) => {
     try {
@@ -643,12 +696,12 @@ var validateData = (schema) => {
           return acc;
         }, {});
         const errorResponse = {
-          status: import_http_status_codes2.StatusCodes.BAD_REQUEST,
+          status: import_http_status_codes4.StatusCodes.BAD_REQUEST,
           message: "pelase fill all the input"
         };
-        res.status(import_http_status_codes2.StatusCodes.BAD_REQUEST).json(errorResponse);
+        res.status(import_http_status_codes4.StatusCodes.BAD_REQUEST).json(errorResponse);
       } else {
-        res.status(import_http_status_codes2.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+        res.status(import_http_status_codes4.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
       }
     }
   };
@@ -677,16 +730,16 @@ route.get("/client", getAllEmployessClient);
 route.post("/", validateData(CreateUserSchema), createEmployee);
 route.delete("/:user_id", deleteEmployee);
 route.get("/:user_id", getEmployeeById);
-route.put("/:user_id?", validateData(UpdateUserProfileSchema), updateProfile);
+route.put("/:user_id?", validateData(UpdateUserProfileSchema), updateEmployee);
 var employee_route_default = route;
 
 // src/route/task-route.ts
 var import_express2 = __toESM(require("express"));
 
 // src/controller/task-controller.ts
-var import_http_status_codes3 = require("http-status-codes");
+var import_http_status_codes5 = require("http-status-codes");
 
-// src/services/task.service.ts
+// src/services/task-service.ts
 var _TaskService = class _TaskService {
 };
 _TaskService.GET_ALL = () => __async(_TaskService, null, function* () {
@@ -792,36 +845,50 @@ var task_service_default = TaskService;
 
 // src/controller/task-controller.ts
 var saveTask = asyncHandler((req, res) => __async(void 0, null, function* () {
+  var _a;
   const tasks = req.body.data;
-  const user_id = req.user.id;
+  const user_id = (_a = req.user) == null ? void 0 : _a.id;
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    });
+  }
   const result = yield task_service_default.STORE(user_id, tasks);
   const successResponse = {
-    status: import_http_status_codes3.StatusCodes.CREATED,
+    status: import_http_status_codes5.StatusCodes.CREATED,
     success: true,
     message: `Report created succesfully for user ${user_id}`,
     data: result
   };
-  res.status(import_http_status_codes3.StatusCodes.OK).json(successResponse);
+  res.status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
 }));
 var getTaskByUserId = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const employee_id = req.user.id;
+  var _a;
+  const employee_id = (_a = req.user) == null ? void 0 : _a.id;
+  if (!employee_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    });
+  }
   const result = yield task_service_default.GET_BY_EMPLOYEE_ID(employee_id);
   const successResponse = {
-    status: import_http_status_codes3.StatusCodes.OK,
+    status: import_http_status_codes5.StatusCodes.OK,
     success: true,
     data: result
   };
-  res.status(import_http_status_codes3.StatusCodes.OK).json(successResponse);
+  res.status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
 }));
 var deleteTask = asyncHandler((req, res) => __async(void 0, null, function* () {
   const task_id = Number(req.params.task_id);
   yield task_service_default.DELETE(task_id);
   const successResponse = {
-    status: import_http_status_codes3.StatusCodes.OK,
+    status: import_http_status_codes5.StatusCodes.OK,
     success: true,
     message: `Task with id ${task_id} has been deleted`
   };
-  res.status(import_http_status_codes3.StatusCodes.OK).json(successResponse);
+  res.status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
 }));
 
 // src/schema/task-schema.ts
@@ -843,13 +910,85 @@ route2.get("/", getTaskByUserId);
 route2.delete("/:task_id", deleteTask);
 var task_route_default = route2;
 
-// src/route/chart-route.ts
+// src/route/profile-route.ts
 var import_express3 = __toESM(require("express"));
 
-// src/controller/chart-controller.ts
-var import_http_status_codes4 = require("http-status-codes");
+// src/services/profile-service.ts
+var _ProfileService = class _ProfileService {
+};
+_ProfileService.GET_PROFILE = (employee_id) => __async(_ProfileService, null, function* () {
+  const getProfileResult = yield query(`
+      SELECT
+        *
+      FROM public."users"
+      WHERE id=$1::integer
+    `, [employee_id]);
+  return getProfileResult == null ? void 0 : getProfileResult.rows.at(0);
+});
+_ProfileService.UPDATE_PROFILE = (employee_id, employee) => __async(_ProfileService, null, function* () {
+  const updateProfileResult = yield query(`
+      UPDATE public."users"
+      SET
+        email=$1
+        password=$2
+        full_name=$3
+        username=$4
+        role_id=$5::integer
+        phone=$6
+      WHERE id=$7::integer
+    `, [employee.email, employee.password, employee.full_name, employee.username, employee.role, employee.phone, employee_id]);
+  return updateProfileResult == null ? void 0 : updateProfileResult.rows.at(0);
+});
+var ProfileService = _ProfileService;
+var profile_service_default = ProfileService;
 
-// src/services/chart.service.ts
+// src/controller/profile-controller.ts
+var getProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
+  var _a;
+  const user_id = (_a = req.user) == null ? void 0 : _a.id;
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    });
+  }
+  const result = yield profile_service_default.GET_PROFILE(user_id);
+  res.status(200).json({
+    status: 200,
+    success: true,
+    data: result
+  });
+}));
+var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
+  var _a;
+  const user_id = (_a = req.user) == null ? void 0 : _a.id;
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    });
+  }
+  const result = yield profile_service_default.UPDATE_PROFILE(user_id, req.body);
+  res.status(200).json({
+    status: 200,
+    success: true,
+    message: `Profile has been succefully updated`,
+    data: result
+  });
+}));
+
+// src/route/profile-route.ts
+var route3 = import_express3.default.Router();
+route3.get("/", getProfile);
+route3.put("/", updateProfile);
+
+// src/route/chart-route.ts
+var import_express4 = __toESM(require("express"));
+
+// src/controller/chart-controller.ts
+var import_http_status_codes6 = require("http-status-codes");
+
+// src/services/chart-service.ts
 var _ChartService = class _ChartService {
 };
 _ChartService.GET_DATA = (employee_id, chart_type) => __async(_ChartService, null, function* () {
@@ -888,8 +1027,15 @@ var chart_service_default = ChartService;
 
 // src/controller/chart-controller.ts
 var getChartData = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = 126;
+  var _a;
+  const user_id = (_a = req.user) == null ? void 0 : _a.id;
   const model = req.params.model;
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    });
+  }
   let responseData;
   switch (model) {
     case "bar":
@@ -900,18 +1046,18 @@ var getChartData = asyncHandler((req, res) => __async(void 0, null, function* ()
       break;
     default:
       const errorResponse = {
-        status: import_http_status_codes4.StatusCodes.BAD_REQUEST,
+        status: import_http_status_codes6.StatusCodes.BAD_REQUEST,
         message: "Invalid chart model"
       };
-      res.status(import_http_status_codes4.StatusCodes.BAD_REQUEST).json(errorResponse);
+      res.status(import_http_status_codes6.StatusCodes.BAD_REQUEST).json(errorResponse);
       return;
   }
   const successResponse = {
-    status: import_http_status_codes4.StatusCodes.OK,
+    status: import_http_status_codes6.StatusCodes.OK,
     success: true,
     data: responseData
   };
-  res.status(import_http_status_codes4.StatusCodes.OK).json(successResponse);
+  res.status(import_http_status_codes6.StatusCodes.OK).json(successResponse);
 }));
 var getDailyWorkingHours = (tasks) => {
   const dailyHours = {};
@@ -937,25 +1083,28 @@ var calculateWorkingHours = (start, end) => {
 };
 
 // src/route/chart-route.ts
-var route3 = import_express3.default.Router();
-route3.get("/:model", getChartData);
-var chart_route_default = route3;
+var route4 = import_express4.default.Router();
+route4.get("/:model", getChartData);
+var chart_route_default = route4;
 
 // src/route/auth-route.ts
-var import_express4 = __toESM(require("express"));
+var import_express5 = __toESM(require("express"));
 
 // src/controller/auth-controller.ts
-var import_http_status_codes5 = require("http-status-codes");
-var import_jsonwebtoken = __toESM(require("jsonwebtoken"));
-var login = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const { email, password } = req.body;
-  const result = yield query(
-    `
+var import_http_status_codes7 = require("http-status-codes");
+var import_jsonwebtoken2 = __toESM(require("jsonwebtoken"));
+
+// src/services/auth-service.ts
+var _AuthService = class _AuthService {
+};
+_AuthService.LOGIN = (loginRequest) => __async(_AuthService, null, function* () {
+  const loginResult = yield query(`
       SELECT 
         u.id, 
         u.email, 
         u.full_name, 
         u.username, 
+        u.phone,
         r.role_name, 
         r.display_name
       FROM 
@@ -963,46 +1112,53 @@ var login = asyncHandler((req, res) => __async(void 0, null, function* () {
       JOIN 
         roles r ON u.role_id = r.id
       WHERE 
-        u.email=$1 AND u.password=$2`,
-    [email, password]
-  );
+        u.email=$1 AND u.password=$2
+    `, [loginRequest.email, loginRequest.password]);
+  return loginResult;
+});
+var AuthService = _AuthService;
+var auth_service_default = AuthService;
+
+// src/controller/auth-controller.ts
+var login = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const result = yield auth_service_default.LOGIN(req.body);
   if ((result == null ? void 0 : result.rowCount) < 1) {
     const errorResponse = {
-      status: import_http_status_codes5.StatusCodes.NOT_FOUND,
+      status: import_http_status_codes7.StatusCodes.NOT_FOUND,
       message: "User with email or password specified, are not found"
     };
-    return res.status(import_http_status_codes5.StatusCodes.BAD_REQUEST).json(errorResponse);
+    return res.status(import_http_status_codes7.StatusCodes.BAD_REQUEST).json(errorResponse);
   }
   const user = result == null ? void 0 : result.rows.at(0);
-  const token = import_jsonwebtoken.default.sign({ user }, "test", { expiresIn: "1h" });
-  res.status(import_http_status_codes5.StatusCodes.OK).json({
-    status: import_http_status_codes5.StatusCodes.OK,
+  const token = import_jsonwebtoken2.default.sign({ user }, "test", { expiresIn: "1h" });
+  res.status(import_http_status_codes7.StatusCodes.OK).json({
+    status: import_http_status_codes7.StatusCodes.OK,
     success: true,
     message: "Login Successfull",
     data: token
   });
 }));
 var logout = (req, res) => {
-  return res.clearCookie("access_token").status(import_http_status_codes5.StatusCodes.OK).json({
-    status: import_http_status_codes5.StatusCodes.OK,
+  return res.clearCookie("access_token").status(import_http_status_codes7.StatusCodes.OK).json({
+    status: import_http_status_codes7.StatusCodes.OK,
     success: true,
     message: "Logout Successfull"
   });
 };
 
 // src/route/auth-route.ts
-var route4 = import_express4.default.Router();
-route4.post("/", login);
-route4.post("/logout", logout);
-var auth_route_default = route4;
+var route5 = import_express5.default.Router();
+route5.post("/", login);
+route5.post("/logout", logout);
+var auth_route_default = route5;
 
 // src/route/absence-route.ts
-var import_express5 = __toESM(require("express"));
+var import_express6 = __toESM(require("express"));
 
 // src/controller/absence-controller.ts
-var import_http_status_codes6 = require("http-status-codes");
+var import_http_status_codes8 = require("http-status-codes");
 
-// src/services/absence.service.ts
+// src/services/absence-service.ts
 var _AbsenceService = class _AbsenceService {
 };
 _AbsenceService.GET_ALL = () => __async(_AbsenceService, null, function* () {
@@ -1013,7 +1169,8 @@ _AbsenceService.GET_ALL = () => __async(_AbsenceService, null, function* () {
         ARRAY_AGG(
             JSON_BUILD_OBJECT(
                 'date', a.date,
-                'type', a.type
+                'type', a.type,
+                'is_approved', a.is_approved
             )
         ) AS absences
     FROM absences a
@@ -1035,19 +1192,11 @@ _AbsenceService.GET_BY_ID = (employee_id) => __async(_AbsenceService, null, func
 _AbsenceService.GET_BY_EMPLOYEE_ID = (employee_id) => __async(_AbsenceService, null, function* () {
   const fetchAbsenceResult = yield query(`
     SELECT
-        u.id AS user_id,
-        u.full_name AS name,
-        ARRAY_AGG(
-            JSON_BUILD_OBJECT(
-                'date', a.date,
-                'type', a.type
-            )
-        ) AS absences
-    FROM absences a
-    JOIN users u ON a.user_id = u.id
-    WHERE a.user_id = $1
-    GROUP BY u.id, u.full_name
-    ORDER BY u.id;
+      date,
+      type,
+      is_approved
+    FROM absences
+    WHERE user_id = $1::integer
     `, [employee_id]);
   return (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || [];
 });
@@ -1095,9 +1244,27 @@ var absence_service_default = AbsenceService;
 
 // src/controller/absence-controller.ts
 var getAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
+  var _a;
+  const user_id = (_a = req.user) == null ? void 0 : _a.id;
   const result = yield absence_service_default.GET_ALL();
   res.status(200).json({
-    status: import_http_status_codes6.StatusCodes.OK,
+    status: import_http_status_codes8.StatusCodes.OK,
+    success: true,
+    data: result
+  });
+}));
+var getAbsenceDataTest = asyncHandler((req, res) => __async(void 0, null, function* () {
+  var _a;
+  const user_id = (_a = req.user) == null ? void 0 : _a.id;
+  if (!user_id) {
+    return res.status(400).json({
+      status: 400,
+      message: `User id is not specified`
+    });
+  }
+  const result = yield absence_service_default.GET_BY_EMPLOYEE_ID(user_id);
+  res.status(200).json({
+    status: import_http_status_codes8.StatusCodes.OK,
     success: true,
     data: result
   });
@@ -1113,7 +1280,7 @@ var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function
   }
   const result = yield absence_service_default.STORE(req.body);
   res.json({
-    status: import_http_status_codes6.StatusCodes.CREATED,
+    status: import_http_status_codes8.StatusCodes.CREATED,
     success: true,
     message: "Absence data has been created successfully",
     data: result
@@ -1124,7 +1291,7 @@ var approveAbsenceData = asyncHandler((req, res) => __async(void 0, null, functi
   const isApproved = req.body.isApproved;
   const result = yield absence_service_default.APPROVAL(absence_id, isApproved);
   res.json({
-    status: import_http_status_codes6.StatusCodes.OK,
+    status: import_http_status_codes8.StatusCodes.OK,
     success: true,
     message: `Absence data has been ${isApproved ? "approved" : "disapproved"}`,
     data: result
@@ -1134,7 +1301,7 @@ var deleteAbsence = asyncHandler((req, res) => __async(void 0, null, function* (
   const absence_id = Number(req.params.absence_id);
   yield absence_service_default.DELETE(absence_id);
   res.json({
-    status: import_http_status_codes6.StatusCodes.OK,
+    status: import_http_status_codes8.StatusCodes.OK,
     success: true,
     message: `The absence has been deleted/canceled`
   });
@@ -1201,20 +1368,21 @@ var absenceApprovalSchema = import_zod4.z.object({
 });
 
 // src/route/absence-route.ts
-var route5 = import_express5.default.Router();
-route5.get("/", getAbsenceData);
-route5.post("/", validateData(absenceSchema), createNewAbsence);
-route5.put("/:absence_id", validateData(absenceApprovalSchema), approveAbsenceData);
-route5.delete("/:absence_id", deleteAbsence);
-var absence_route_default = route5;
+var route6 = import_express6.default.Router();
+route6.get("/", getAbsenceData);
+route6.get("/history", getAbsenceDataTest);
+route6.post("/", validateData(absenceSchema), createNewAbsence);
+route6.put("/:absence_id", validateData(absenceApprovalSchema), approveAbsenceData);
+route6.delete("/:absence_id", deleteAbsence);
+var absence_route_default = route6;
 
 // src/route/project-route.ts
-var import_express6 = __toESM(require("express"));
+var import_express7 = __toESM(require("express"));
 
 // src/controller/project-controller.ts
-var import_http_status_codes7 = require("http-status-codes");
+var import_http_status_codes9 = require("http-status-codes");
 
-// src/services/project.service.ts
+// src/services/project-service.ts
 var _ProjectService = class _ProjectService {
 };
 _ProjectService.GET_ALL = () => __async(_ProjectService, null, function* () {
@@ -1266,8 +1434,8 @@ var project_service_default = ProjectService;
 // src/controller/project-controller.ts
 var getAllProject = asyncHandler((req, res) => __async(void 0, null, function* () {
   const result = yield project_service_default.GET_ALL();
-  res.status(import_http_status_codes7.StatusCodes.OK).json({
-    status: import_http_status_codes7.StatusCodes.OK,
+  res.status(import_http_status_codes9.StatusCodes.OK).json({
+    status: import_http_status_codes9.StatusCodes.OK,
     success: true,
     data: result
   });
@@ -1276,22 +1444,22 @@ var getProjectById = asyncHandler((req, res) => __async(void 0, null, function* 
   const project_id = Number(req.params.project_id);
   if (!project_id) {
     const response = {
-      status: import_http_status_codes7.StatusCodes.BAD_REQUEST,
+      status: import_http_status_codes9.StatusCodes.BAD_REQUEST,
       message: "Project ID not specified"
     };
-    return res.status(import_http_status_codes7.StatusCodes.BAD_REQUEST).json(response);
+    return res.status(import_http_status_codes9.StatusCodes.BAD_REQUEST).json(response);
   }
   const result = yield project_service_default.GET_BY_ID(project_id);
-  res.status(import_http_status_codes7.StatusCodes.OK).json({
-    status: import_http_status_codes7.StatusCodes.OK,
+  res.status(import_http_status_codes9.StatusCodes.OK).json({
+    status: import_http_status_codes9.StatusCodes.OK,
     success: true,
     data: result
   });
 }));
 var createNewProject = asyncHandler((req, res) => __async(void 0, null, function* () {
   const result = project_service_default.STORE(req.body);
-  res.status(import_http_status_codes7.StatusCodes.CREATED).json({
-    status: import_http_status_codes7.StatusCodes.CREATED,
+  res.status(import_http_status_codes9.StatusCodes.CREATED).json({
+    status: import_http_status_codes9.StatusCodes.CREATED,
     success: true,
     message: `New project successfully created`,
     data: result
@@ -1300,8 +1468,8 @@ var createNewProject = asyncHandler((req, res) => __async(void 0, null, function
 var updateProject = asyncHandler((req, res) => __async(void 0, null, function* () {
   const project_id = Number(req.params.project_id);
   const result = yield project_service_default.UPDATE(project_id, req.body);
-  res.status(import_http_status_codes7.StatusCodes.OK).json({
-    status: import_http_status_codes7.StatusCodes.OK,
+  res.status(import_http_status_codes9.StatusCodes.OK).json({
+    status: import_http_status_codes9.StatusCodes.OK,
     success: true,
     message: `Project with ID ${project_id} has been updated`,
     data: result
@@ -1310,29 +1478,29 @@ var updateProject = asyncHandler((req, res) => __async(void 0, null, function* (
 var deleteProject = asyncHandler((req, res) => __async(void 0, null, function* () {
   const project_id = Number(req.params.project_id);
   project_service_default.DELETE(project_id);
-  res.status(import_http_status_codes7.StatusCodes.OK).json({
-    status: import_http_status_codes7.StatusCodes.OK,
+  res.status(import_http_status_codes9.StatusCodes.OK).json({
+    status: import_http_status_codes9.StatusCodes.OK,
     success: true,
     message: `Project with ID ${project_id} has been deleted`
   });
 }));
 
 // src/route/project-route.ts
-var route6 = import_express6.default.Router();
-route6.get("/", getAllProject);
-route6.get("/:project_id", getProjectById);
-route6.post("/", createNewProject);
-route6.put("/:project_id", updateProject);
-route6.delete("/:project_id", deleteProject);
-var project_route_default = route6;
+var route7 = import_express7.default.Router();
+route7.get("/", getAllProject);
+route7.get("/:project_id", getProjectById);
+route7.post("/", createNewProject);
+route7.put("/:project_id", updateProject);
+route7.delete("/:project_id", deleteProject);
+var project_route_default = route7;
 
 // src/route/role-route.ts
-var import_express7 = __toESM(require("express"));
+var import_express8 = __toESM(require("express"));
 
 // src/controller/role-controller.ts
-var import_http_status_codes8 = require("http-status-codes");
+var import_http_status_codes10 = require("http-status-codes");
 
-// src/services/role.service.ts
+// src/services/role-service.ts
 var _RoleService = class _RoleService {
 };
 _RoleService.GET_ALL = () => __async(_RoleService, null, function* () {
@@ -1387,8 +1555,8 @@ var role_service_default = RoleService;
 // src/controller/role-controller.ts
 var getAllRole = asyncHandler((req, res) => __async(void 0, null, function* () {
   const result = yield role_service_default.GET_ALL();
-  res.status(import_http_status_codes8.StatusCodes.OK).json({
-    status: import_http_status_codes8.StatusCodes.OK,
+  res.status(import_http_status_codes10.StatusCodes.OK).json({
+    status: import_http_status_codes10.StatusCodes.OK,
     success: true,
     data: result
   });
@@ -1397,22 +1565,22 @@ var getRoleById = asyncHandler((req, res) => __async(void 0, null, function* () 
   const role_id = Number(req.params.role_id);
   if (!role_id) {
     const response = {
-      status: import_http_status_codes8.StatusCodes.BAD_REQUEST,
+      status: import_http_status_codes10.StatusCodes.BAD_REQUEST,
       message: "Role ID not specified"
     };
-    return res.status(import_http_status_codes8.StatusCodes.BAD_REQUEST).json(response);
+    return res.status(import_http_status_codes10.StatusCodes.BAD_REQUEST).json(response);
   }
   const result = yield role_service_default.GET_BY_ID(role_id);
-  res.status(import_http_status_codes8.StatusCodes.OK).json({
-    status: import_http_status_codes8.StatusCodes.OK,
+  res.status(import_http_status_codes10.StatusCodes.OK).json({
+    status: import_http_status_codes10.StatusCodes.OK,
     success: true,
     data: result
   });
 }));
 var createNewRole = asyncHandler((req, res) => __async(void 0, null, function* () {
   const result = role_service_default.STORE(req.body);
-  res.status(import_http_status_codes8.StatusCodes.CREATED).json({
-    status: import_http_status_codes8.StatusCodes.CREATED,
+  res.status(import_http_status_codes10.StatusCodes.CREATED).json({
+    status: import_http_status_codes10.StatusCodes.CREATED,
     success: true,
     message: `New role successfully created`,
     data: result
@@ -1424,8 +1592,8 @@ var updateRole = asyncHandler((req, res) => __async(void 0, null, function* () {
     role_id,
     req.body
   );
-  res.status(import_http_status_codes8.StatusCodes.OK).json({
-    status: import_http_status_codes8.StatusCodes.OK,
+  res.status(import_http_status_codes10.StatusCodes.OK).json({
+    status: import_http_status_codes10.StatusCodes.OK,
     success: true,
     message: `Role with ID ${role_id} has been updated`,
     data: result
@@ -1434,65 +1602,39 @@ var updateRole = asyncHandler((req, res) => __async(void 0, null, function* () {
 var deleteRole = asyncHandler((req, res) => __async(void 0, null, function* () {
   const role_id = Number(req.params.role_id);
   role_service_default.DELETE(role_id);
-  res.status(import_http_status_codes8.StatusCodes.OK).json({
-    status: import_http_status_codes8.StatusCodes.OK,
+  res.status(import_http_status_codes10.StatusCodes.OK).json({
+    status: import_http_status_codes10.StatusCodes.OK,
     success: true,
     message: `Role with ID ${role_id} has been deleted`
   });
 }));
 
 // src/route/role-route.ts
-var route7 = import_express7.default.Router();
-route7.get("/", getAllRole);
-route7.get("/:role_id", getRoleById);
-route7.post("/", createNewRole);
-route7.put("/:role_id", updateRole);
-route7.delete("/:role_id", deleteRole);
-var role_route_default = route7;
+var route8 = import_express8.default.Router();
+route8.get("/", getAllRole);
+route8.get("/:role_id", getRoleById);
+route8.post("/", createNewRole);
+route8.put("/:role_id", updateRole);
+route8.delete("/:role_id", deleteRole);
+var role_route_default = route8;
 
 // src/server.ts
-var import_cors = __toESM(require_lib());
-var import_helmet = __toESM(require("helmet"));
-
-// src/error/not-found.ts
-var import_http_status_codes9 = require("http-status-codes");
-var notFoundHandler = (req, res) => {
-  const response = {
-    status: import_http_status_codes9.StatusCodes.NOT_FOUND,
-    message: `Not found: ${req.originalUrl}`
-  };
-  res.status(404).json(response);
-};
-
-// src/error/error.ts
-var import_http_status_codes10 = require("http-status-codes");
-var errorHandler = (error, req, res, next) => {
-  const response = {
-    status: import_http_status_codes10.StatusCodes.INTERNAL_SERVER_ERROR,
-    message: error.message
-  };
-  console.log(error);
-  return res.status(import_http_status_codes10.StatusCodes.INTERNAL_SERVER_ERROR).json(response);
-};
-
-// src/server.ts
-var import_cookie_parser = __toESM(require("cookie-parser"));
 require("dotenv").config();
 var asyncHandler2 = () => __async(exports, null, function* () {
   yield pg_default.connect();
-  const app = (0, import_express8.default)();
+  const app = (0, import_express9.default)();
   const PORT = process.env.PORT || 8080;
   app.use((0, import_cookie_parser.default)());
   app.use((0, import_helmet.default)());
   app.use((0, import_cors.default)());
-  app.use(import_express8.default.json());
-  app.use(import_express8.default.urlencoded({ extended: true }));
-  app.use(import_express8.default.static("public"));
+  app.use(import_express9.default.json());
+  app.use(import_express9.default.urlencoded({ extended: true }));
+  app.use(import_express9.default.static("public"));
   app.use("/api/auth/", auth_route_default);
   app.use("/api/employees/", employee_route_default);
   app.use("/api/tasks/", task_route_default);
-  app.use("/api/charts/", chart_route_default);
-  app.use("/api/absences/", absence_route_default);
+  app.use("/api/charts/", verifyToken, chart_route_default);
+  app.use("/api/absences/", verifyToken, absence_route_default);
   app.use("/api/projects/", project_route_default);
   app.use("/api/roles/", role_route_default);
   app.use(notFoundHandler);
