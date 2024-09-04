@@ -61,7 +61,11 @@ export type Absence = {
   user_id?: number;
   date: Date;
   type: 'WFH' | 'AL' | 'SL';
-  isApproved?: boolean;
+  date_pending?: Date;
+  date_team_lead_approved?: Date;
+  date_hr_approved?: Date;
+  is_approved?: boolean;
+  reason?: string;
 }
 
 export type Login = {

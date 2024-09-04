@@ -697,7 +697,7 @@ var validateData = (schema) => {
         }, {});
         const errorResponse = {
           status: import_http_status_codes4.StatusCodes.BAD_REQUEST,
-          message: "pelase fill all the input"
+          message: errorMessages
         };
         res.status(import_http_status_codes4.StatusCodes.BAD_REQUEST).json(errorResponse);
       } else {
@@ -1170,7 +1170,7 @@ _AbsenceService.GET_ALL = () => __async(_AbsenceService, null, function* () {
             JSON_BUILD_OBJECT(
                 'date', a.date,
                 'type', a.type,
-                'is_approved', a.is_approved
+                'reason', a.reason
             )
         ) AS absences
     FROM absences a
@@ -1187,14 +1187,19 @@ _AbsenceService.GET_BY_ID = (employee_id) => __async(_AbsenceService, null, func
     FROM absences a
     WHERE id=$1
     `, [employee_id]);
-  return (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || [];
+  return fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows.at(0);
 });
 _AbsenceService.GET_BY_EMPLOYEE_ID = (employee_id) => __async(_AbsenceService, null, function* () {
   const fetchAbsenceResult = yield query(`
     SELECT
+      id,
+      user_id,
       date,
       type,
-      is_approved
+      date_team_lead_approved,
+      date_hr_approved,
+      is_approved,
+      reason
     FROM absences
     WHERE user_id = $1::integer
     `, [employee_id]);
@@ -1205,23 +1210,12 @@ _AbsenceService.STORE = (absence) => __async(_AbsenceService, null, function* ()
     INSERT INTO absences (
       user_id, 
       date, 
-      type
-    ) VALUES ($1::integer, $2, $3) 
+      type,
+      date_pending
+    ) VALUES ($1::integer, $2, $3, NOW()) 
     RETURNING *
     `, [absence.user_id, absence.date, absence.type]);
   return saveAbsenceResult == null ? void 0 : saveAbsenceResult.rows.at(0);
-});
-_AbsenceService.UPDATE = (employee_id, absence) => __async(_AbsenceService, null, function* () {
-  const updateResult = yield query(`
-    UPDATE absences
-    SET
-      user_id=$1::integer,
-      date=$2,
-      type=$3
-    WHERE id=$4::integer
-    RETURNING *
-    `, [absence.user_id, absence.date, absence.type, employee_id]);
-  return updateResult == null ? void 0 : updateResult.rows.at(0);
 });
 _AbsenceService.DELETE = (absence_id) => __async(_AbsenceService, null, function* () {
   yield query(`
@@ -1229,15 +1223,37 @@ _AbsenceService.DELETE = (absence_id) => __async(_AbsenceService, null, function
     WHERE id=$1::integer
     `, [absence_id]);
 });
-_AbsenceService.APPROVAL = (absence_id, isApproved) => __async(_AbsenceService, null, function* () {
-  const updateApprovalResult = yield query(`
-    UPDATE 
-      absences 
-    SET is_approved=$1 
-    WHERE id=$2
-    RETURNING *
-    `, [isApproved, absence_id]);
-  return updateApprovalResult == null ? void 0 : updateApprovalResult.rows.at(0);
+_AbsenceService.UPDATE_STATUS = (absence_id, approval) => __async(_AbsenceService, null, function* () {
+  const absence = yield _AbsenceService.GET_BY_ID(absence_id);
+  if (!absence) {
+    throw new Error(`Absence with ID ${absence_id} not found.`);
+  }
+  let sql = `UPDATE absences SET `;
+  const params = [];
+  let updateField = "";
+  if (approval.is_approved) {
+    if (!absence.date_pending) {
+      updateField = "date_pending = NOW()";
+    } else if (!absence.date_team_lead_approved) {
+      updateField = "date_team_lead_approved = NOW()";
+    } else if (!absence.date_hr_approved) {
+      updateField = "date_hr_approved = NOW(), is_approved = TRUE";
+    }
+    if (!updateField) {
+      return { message: "All fields are already set." };
+    }
+    sql += `${updateField} WHERE id = $1 RETURNING *`;
+  } else {
+    sql += `is_approved = FALSE`;
+    if (approval.reason) {
+      sql += `, reason = $1`;
+      params.push(approval.reason);
+    }
+    sql += ` WHERE id = $2 RETURNING *`;
+  }
+  params.push(absence_id);
+  const updateResult = yield query(sql, params);
+  return updateResult == null ? void 0 : updateResult.rows.at(0);
 });
 var AbsenceService = _AbsenceService;
 var absence_service_default = AbsenceService;
@@ -1263,6 +1279,23 @@ var getAbsenceDataTest = asyncHandler((req, res) => __async(void 0, null, functi
     });
   }
   const result = yield absence_service_default.GET_BY_EMPLOYEE_ID(user_id);
+  const mutated_result = result.map((absence) => ({
+    absenceId: absence.id,
+    absenceRequestedDate: absence.date,
+    approvalStatus: absence.is_approved,
+    approvalDetails: [
+      {
+        isApprovedByTeamLeader: absence.date_team_lead_approved ? true : null,
+        date: absence.date_team_lead_approved ? absence.date_team_lead_approved : null
+      },
+      {
+        isApprovedByHr: absence.date_hr_approved ? true : null,
+        date: absence.date_hr_approved ? absence.date_hr_approved : null
+      }
+    ],
+    reason: absence.reason || null
+    // Handle the reason field
+  }));
   res.status(200).json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,
@@ -1287,13 +1320,16 @@ var createNewAbsence = asyncHandler((req, res) => __async(void 0, null, function
   });
 }));
 var approveAbsenceData = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const absence = {
+    is_approved: Boolean(req.body.is_approved),
+    reason: req.body.reason
+  };
   const absence_id = Number(req.params.absence_id);
-  const isApproved = req.body.isApproved;
-  const result = yield absence_service_default.APPROVAL(absence_id, isApproved);
+  const result = yield absence_service_default.UPDATE_STATUS(absence_id, absence);
   res.json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,
-    message: `Absence data has been ${isApproved ? "approved" : "disapproved"}`,
+    message: `Absence data has been akwaokwao`,
     data: result
   });
 }));
@@ -1361,10 +1397,16 @@ var absenceSchema = import_zod4.z.object({
   ], { message: "Type not match!! The only accepted value are 'WFH', 'AL', 'SL'" })
 });
 var absenceApprovalSchema = import_zod4.z.object({
-  isApproved: import_zod4.z.boolean({
-    required_error: "The isApproved is required",
-    message: "isApproved Only accept boolean value"
-  })
+  is_approved: import_zod4.z.boolean({ message: "Type not match!! The only accepted value are 'approved' and 'declined'" }),
+  reason: import_zod4.z.string().optional()
+}).refine((data) => {
+  if (!data.is_approved && (!data.reason || data.reason.trim() === "")) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Reason is required when is_approved is 'declined'",
+  path: ["reason"]
 });
 
 // src/route/absence-route.ts

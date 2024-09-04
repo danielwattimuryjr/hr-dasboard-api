@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
-import { ErrorResponse, SuccessResponse } from "../types";
+import { Absence, ErrorResponse, SuccessResponse } from "../types";
 import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
 import AbsenceService from "../services/absence-service";
@@ -8,10 +8,7 @@ import AbsenceService from "../services/absence-service";
 type AbsenceItem = {
   user_id?: number;
   name?: string;
-  absences: {
-    date: Date;
-    type: 'WFH' | 'AL' | 'SL';
-  }[]
+  absences: Absence[]
 }
 
 type AbsenceRequest = Request<{}, any, {
@@ -19,7 +16,24 @@ type AbsenceRequest = Request<{}, any, {
   date: Date;
   type: 'WFH' | 'AL' | 'SL';
 }>
+
 type AbsenceResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
+
+type ApprovalDetails = {
+  isApprovedByTeamLeader: boolean;
+  date: Date;
+} | {
+  isApprovedByHr: boolean;
+  date: Date;
+};
+
+type MutatedResult = {
+  absenceId: number;
+  absenceRequestedDate: Date;
+  approvalStatus: boolean;
+  approvalDetails: ApprovalDetails[];
+  reason?: string;
+};
 
 // @desc  Get all absence for all user
 // @route GET /api/absences
@@ -48,6 +62,23 @@ const getAbsenceDataTest = asyncHandler(async (req: AbsenceRequest, res: Absence
 
   // const result = await AbsenceService.GET_ALL()
   const result = await AbsenceService.GET_BY_EMPLOYEE_ID(user_id)
+
+  const mutated_result: MutatedResult[] = result.map((absence: Absence) => ({
+    absenceId: absence.id,
+    absenceRequestedDate: absence.date,
+    approvalStatus: absence.is_approved,
+    approvalDetails: [
+      {
+        isApprovedByTeamLeader: absence.date_team_lead_approved ? true : null,
+        date: absence.date_team_lead_approved ? absence.date_team_lead_approved : null,
+      },
+      {
+        isApprovedByHr: absence.date_hr_approved ? true : null,
+        date: absence.date_hr_approved ? absence.date_hr_approved : null,
+      },
+    ],
+    reason: absence.reason || null, // Handle the reason field
+  }))
 
   res.status(200).json({
     status: StatusCodes.OK,
@@ -81,16 +112,20 @@ const createNewAbsence = asyncHandler(async (req: AbsenceRequest, res: AbsenceRe
 
 // @desc  Approve an absence data
 // @route PUT /api/absences/:absence_id
-const approveAbsenceData = asyncHandler(async (req: Request<{ absence_id: number }, any, { isApproved: boolean }>, res: AbsenceResponse<any>) => {
+const approveAbsenceData = asyncHandler(async (req: Request<{ absence_id: number }, any, { is_approved: boolean, reason?: string }>, res: AbsenceResponse<any>) => {
+  const absence = {
+    is_approved: Boolean(req.body.is_approved),
+    reason: req.body.reason
+  }
   const absence_id = Number(req.params.absence_id)
-  const isApproved = req.body.isApproved
 
-  const result = await AbsenceService.APPROVAL(absence_id, isApproved)
+
+  const result = await AbsenceService.UPDATE_STATUS(absence_id, absence)
 
   res.json({
     status: StatusCodes.OK,
     success: true,
-    message: `Absence data has been ${isApproved ? 'approved' : 'disapproved'}`,
+    message: `Absence data has been akwaokwao`,
     data: result
   })
 })

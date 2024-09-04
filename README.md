@@ -595,6 +595,41 @@
 
 </details>
 
+<details>
+ <summary><code>PUT</code> <code><b>192.168.18.30:3000/api/absences/{absence_id}</b></code> <code>(Giving approval to an absence request)</code></summary>
+
+##### Request
+
+```json
+{
+  "is_approved": false,
+  "reason": "Only need to specify the reason, if the is_approved are set to false"
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Absence data has been akwaokwao",
+  "data": {
+    "id": 1,
+    "user_id": 127,
+    "date": "2024-08-26T00:00:00.000Z",
+    "type": "WFH",
+    "date_pending": null,
+    "date_team_lead_approved": null,
+    "date_hr_approved": null,
+    "is_approved": false,
+    "reason": "Only need to specify the reason, if the is_approved are set to false"
+  }
+}
+```
+
+</details>
+
 #### Projects
 
 <details>

@@ -11,7 +11,7 @@ class AbsenceService {
             JSON_BUILD_OBJECT(
                 'date', a.date,
                 'type', a.type,
-                'is_approved', a.is_approved
+                'reason', a.reason
             )
         ) AS absences
     FROM absences a
@@ -23,7 +23,7 @@ class AbsenceService {
     return fetchAbsenceResult?.rows || [];
   }
 
-  static GET_BY_ID = async (employee_id: number) => {
+  static GET_BY_ID = async (employee_id: number): Promise<Absence> => {
     const fetchAbsenceResult = await query<Absence>(`
     SELECT
        *
@@ -31,15 +31,20 @@ class AbsenceService {
     WHERE id=$1
     `, [employee_id]);
 
-    return fetchAbsenceResult?.rows || [];
+    return fetchAbsenceResult?.rows.at(0);
   }
 
   static GET_BY_EMPLOYEE_ID = async (employee_id: number) => {
     const fetchAbsenceResult = await query<any>(`
     SELECT
+      id,
+      user_id,
       date,
       type,
-      is_approved
+      date_team_lead_approved,
+      date_hr_approved,
+      is_approved,
+      reason
     FROM absences
     WHERE user_id = $1::integer
     `, [employee_id]);
@@ -52,26 +57,13 @@ class AbsenceService {
     INSERT INTO absences (
       user_id, 
       date, 
-      type
-    ) VALUES ($1::integer, $2, $3) 
+      type,
+      date_pending
+    ) VALUES ($1::integer, $2, $3, NOW()) 
     RETURNING *
     `, [absence.user_id, absence.date, absence.type]);
 
     return saveAbsenceResult?.rows.at(0)
-  }
-
-  static UPDATE = async (employee_id: number, absence: Absence) => {
-    const updateResult = await query<Absence>(`
-    UPDATE absences
-    SET
-      user_id=$1::integer,
-      date=$2,
-      type=$3
-    WHERE id=$4::integer
-    RETURNING *
-    `, [absence.user_id, absence.date, absence.type, employee_id])
-
-    return updateResult?.rows.at(0)
   }
 
   static DELETE = async (absence_id: number) => {
@@ -81,16 +73,46 @@ class AbsenceService {
     `, [absence_id])
   }
 
-  static APPROVAL = async (absence_id: number, isApproved: boolean) => {
-    const updateApprovalResult = await query<Absence>(`
-    UPDATE 
-      absences 
-    SET is_approved=$1 
-    WHERE id=$2
-    RETURNING *
-    `, [isApproved, absence_id])
+  static UPDATE_STATUS = async (absence_id: number, approval: {
+    is_approved: boolean;
+    reason?: string
+  }) => {
+    const absence = await this.GET_BY_ID(absence_id);
+    if (!absence) {
+      throw new Error(`Absence with ID ${absence_id} not found.`);
+    }
 
-    return updateApprovalResult?.rows.at(0)
+    let sql = `UPDATE absences SET `;
+    const params: any[] = [];
+    let updateField = '';
+
+    if (approval.is_approved) {
+      if (!absence.date_pending) {
+        updateField = 'date_pending = NOW()';
+      } else if (!absence.date_team_lead_approved) {
+        updateField = 'date_team_lead_approved = NOW()';
+      } else if (!absence.date_hr_approved) {
+        updateField = 'date_hr_approved = NOW(), is_approved = TRUE';
+      }
+
+      if (!updateField) {
+        return { message: "All fields are already set." };
+      }
+
+      sql += `${updateField} WHERE id = $1 RETURNING *`;
+    } else {
+      sql += `is_approved = FALSE`;
+      if (approval.reason) {
+        sql += `, reason = $1`;
+        params.push(approval.reason);
+      }
+      sql += ` WHERE id = $2 RETURNING *`;
+    }
+    params.push(absence_id);
+
+    const updateResult = await query<Absence>(sql, params);
+
+    return updateResult?.rows.at(0);
   }
 }
 

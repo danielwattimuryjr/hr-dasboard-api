@@ -19,7 +19,7 @@ const validateData = (schema: z.ZodObject<any, any>) => {
 
         const errorResponse: ErrorResponse = {
           status: StatusCodes.BAD_REQUEST,
-          message: "pelase fill all the input"
+          message: errorMessages
         }
 
         res.status(StatusCodes.BAD_REQUEST).json(errorResponse);

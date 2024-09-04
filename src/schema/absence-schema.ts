@@ -10,10 +10,17 @@ const absenceSchema = z.object({
 })
 
 const absenceApprovalSchema = z.object({
-  isApproved: z.boolean({
-    required_error: "The isApproved is required",
-    message: "isApproved Only accept boolean value"
-  })
-})
+  is_approved: z.boolean({ message: "Type not match!! The only accepted value are 'approved' and 'declined'" }),
+  reason: z.string().optional(),
+}).refine(data => {
+  if (!data.is_approved && (!data.reason || data.reason.trim() === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Reason is required when is_approved is 'declined'",
+  path: ["reason"],
+});
+
 
 export { absenceSchema, absenceApprovalSchema };
