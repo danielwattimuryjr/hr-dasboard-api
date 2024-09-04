@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
 import { ErrorResponse, Project, SuccessResponse } from "../types";
-import { query } from "../libs/pg";
 import { StatusCodes } from "http-status-codes";
 import ProjectService from "../services/project-service";
 
@@ -42,7 +41,7 @@ const getProjectById = asyncHandler(async (req: ProjectRequest, res: ProjectResp
   })
 })
 
-const createNewProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<Project>) => {
+const createNewProject = asyncHandler(async (req: ProjectRequest, res: ProjectResponse<any>) => {
   const result = ProjectService.STORE(req.body)
 
   res.status(StatusCodes.CREATED).json({

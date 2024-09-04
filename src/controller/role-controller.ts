@@ -42,7 +42,7 @@ const getRoleById = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role
   })
 })
 
-const createNewRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role>) => {
+const createNewRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<any>) => {
   const result = RoleService.STORE(req.body)
 
   res.status(StatusCodes.CREATED).json({
@@ -53,7 +53,7 @@ const createNewRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<Ro
   })
 })
 
-const updateRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role>) => {
+const updateRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<any>) => {
   const role_id = Number(req.params.role_id);
 
   const result = RoleService.UPDATE(

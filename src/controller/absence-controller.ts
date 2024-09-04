@@ -60,25 +60,7 @@ const getAbsenceDataTest = asyncHandler(async (req: AbsenceRequest, res: Absence
     } as ErrorResponse)
   }
 
-  // const result = await AbsenceService.GET_ALL()
   const result = await AbsenceService.GET_BY_EMPLOYEE_ID(user_id)
-
-  const mutated_result: MutatedResult[] = result.map((absence: Absence) => ({
-    absenceId: absence.id,
-    absenceRequestedDate: absence.date,
-    approvalStatus: absence.is_approved,
-    approvalDetails: [
-      {
-        isApprovedByTeamLeader: absence.date_team_lead_approved ? true : null,
-        date: absence.date_team_lead_approved ? absence.date_team_lead_approved : null,
-      },
-      {
-        isApprovedByHr: absence.date_hr_approved ? true : null,
-        date: absence.date_hr_approved ? absence.date_hr_approved : null,
-      },
-    ],
-    reason: absence.reason || null, // Handle the reason field
-  }))
 
   res.status(200).json({
     status: StatusCodes.OK,

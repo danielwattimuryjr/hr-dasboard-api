@@ -1,10 +1,27 @@
 "use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
@@ -1135,7 +1152,7 @@ var login = asyncHandler((req, res) => __async(void 0, null, function* () {
     status: import_http_status_codes7.StatusCodes.OK,
     success: true,
     message: "Login Successfull",
-    data: token
+    data: __spreadProps(__spreadValues({}, user), { token })
   });
 }));
 var logout = (req, res) => {
@@ -1202,6 +1219,7 @@ _AbsenceService.GET_BY_EMPLOYEE_ID = (employee_id) => __async(_AbsenceService, n
       reason
     FROM absences
     WHERE user_id = $1::integer
+    ORDER BY id ASC
     `, [employee_id]);
   return (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || [];
 });
@@ -1279,23 +1297,6 @@ var getAbsenceDataTest = asyncHandler((req, res) => __async(void 0, null, functi
     });
   }
   const result = yield absence_service_default.GET_BY_EMPLOYEE_ID(user_id);
-  const mutated_result = result.map((absence) => ({
-    absenceId: absence.id,
-    absenceRequestedDate: absence.date,
-    approvalStatus: absence.is_approved,
-    approvalDetails: [
-      {
-        isApprovedByTeamLeader: absence.date_team_lead_approved ? true : null,
-        date: absence.date_team_lead_approved ? absence.date_team_lead_approved : null
-      },
-      {
-        isApprovedByHr: absence.date_hr_approved ? true : null,
-        date: absence.date_hr_approved ? absence.date_hr_approved : null
-      }
-    ],
-    reason: absence.reason || null
-    // Handle the reason field
-  }));
   res.status(200).json({
     status: import_http_status_codes8.StatusCodes.OK,
     success: true,

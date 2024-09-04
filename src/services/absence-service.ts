@@ -23,7 +23,7 @@ class AbsenceService {
     return fetchAbsenceResult?.rows || [];
   }
 
-  static GET_BY_ID = async (employee_id: number): Promise<Absence> => {
+  static GET_BY_ID = async (employee_id: number): Promise<Absence | undefined> => {
     const fetchAbsenceResult = await query<Absence>(`
     SELECT
        *
@@ -47,6 +47,7 @@ class AbsenceService {
       reason
     FROM absences
     WHERE user_id = $1::integer
+    ORDER BY id ASC
     `, [employee_id]);
 
     return fetchAbsenceResult?.rows || [];
@@ -78,6 +79,7 @@ class AbsenceService {
     reason?: string
   }) => {
     const absence = await this.GET_BY_ID(absence_id);
+
     if (!absence) {
       throw new Error(`Absence with ID ${absence_id} not found.`);
     }

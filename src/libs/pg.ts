@@ -57,39 +57,3 @@ const disconnect = async (): Promise<void> => {
 };
 
 export default { connect, disconnect };
-
-
-
-
-// import { Pool, PoolConfig, QueryResult } from "pg";
-
-// const poolConfig: PoolConfig = {
-//    user: process.env.DB_USER,
-//     password:  process.env.DB_PASSWORD,
-//     host: process.env.DB_HOST,
-//     port: Number(process.env.DB_PORT),
-//     database: process.env.DB_NAME,
-// }
-
-// const pool = new Pool(poolConfig);
-
-// export const query = async (query: string, params?: any[]): Promise<QueryResult<any> | undefined> => {
-//   try{
-//     return await pool.query(query, params);
-//   } catch (error) {
-//     console.log("Query failed:", error);
-//     return undefined
-//   }
-// }
-
-// const disconnect = async (): Promise<void> => {
-//   try {
-//     console.log("Disconnecting from DB");
-//     await pool.end();
-//     console.log("Disconnected from DB");
-//   } catch (error) {
-//     console.error("Failed to disconnect from DB:", error);
-//   }
-// }
-
-// export default {disconnect}

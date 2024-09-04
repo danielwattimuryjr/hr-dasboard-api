@@ -10,7 +10,7 @@ type LoginRequest = Request<{}, any, Login>
 type LoginResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 
 
-export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<string>) => {
+export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<any>) => {
   const result = await AuthService.LOGIN(req.body)
 
   if (result?.rowCount < 1) {
@@ -34,7 +34,7 @@ export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<s
       status: StatusCodes.OK,
       success: true,
       message: "Login Successfull",
-      data: token
+      data: { ...user, token },
     });
 })
 
