@@ -31,6 +31,7 @@ export type Employee = {
   display_name?: string;
   profile_pic?: string;
   phone?: string;
+  level?: 'employee' | 'hr' | 'lead'
 }
 
 export type Role = {
@@ -43,6 +44,11 @@ export type Role = {
 export type Project = {
   id?: number;
   project_name: string;
+}
+
+export type Team = {
+  id?: number;
+  name: string;
 }
 
 export type Task = {
@@ -71,6 +77,11 @@ export type Absence = {
 export type Login = {
   email: string;
   password: string;
+}
+
+export type TeamUser = {
+  team_id: number;
+  user_id: number;
 }
 
 export type Period = "weekly" | "monthly" | null;

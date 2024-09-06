@@ -136,6 +136,47 @@
 
 </details>
 
+#### Profiles
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/profiles</b></code> <code>(Get current logged in user info)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": {
+    "id": 127,
+    "email": "user2-edited@example.com",
+    "full_name": "User Two",
+    "username": "usertwo",
+    "phone": "1234567891",
+    "role": "back-end"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>PUT</code> <code><b>192.168.18.30:3000/api/profiles</b></code> <code>(Update current logged in user info)</code></summary>
+
+##### Request
+
+```json
+
+```
+
+##### Response
+
+```json
+
+```
+
+</details>
+
 #### Employees
 
 <details>
@@ -260,7 +301,9 @@
   "password": "password",
   "full_name": "New User",
   "username": "user-at-mogin",
-  "role_id": 1
+  "role_id": 1,
+  "phone": "0812131231",
+  "level": "hr"
 }
 ```
 
@@ -278,7 +321,9 @@
     "full_name": "New User",
     "username": "user-at-mogin",
     "role_id": 1,
-    "profile_pic": null
+    "profile_pic": null,
+    "phone": "0812131231",
+    "level": "hr"
   }
 }
 ```
@@ -330,6 +375,161 @@
   "status": 200,
   "success": true,
   "message": "User with id 47 has been deleted"
+}
+```
+
+</details>
+
+#### Teams
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/teams</b></code> <code>(Get all the teams)</code></summary>
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "name": "Team B"
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+ <summary><code>POST</code> <code><b>192.168.18.30:3000/api/teams</b></code> <code>(Create new team)</code></summary>
+
+##### Request
+
+```json
+{
+  "name": "Team Super"
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 201,
+  "success": true,
+  "message": "Team has been created sucessfully",
+  "data": {
+    "id": 3,
+    "name": "Team Super"
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>GET</code> <code><b>192.168.18.30:3000/api/teams/show</b></code> <code>(Get teams detail with the members)</code></summary>
+
+##### Request
+
+```json
+{
+  {
+    "team_id": 2
+  }
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "data": {
+    "team": {
+      "id": 2,
+      "name": "Team B"
+    },
+    "members": []
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>POST</code> <code><b>192.168.18.30:3000/api/teams/add-member</b></code> <code>(Assign employee to a team)</code></summary>
+
+##### Request
+
+```json
+{
+  "team_id": 3,
+  "user_id": 138
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 201,
+  "success": true,
+  "message": "Employee has been successfully added into the team",
+  "data": {
+    "team_id": 3,
+    "user_id": 138
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>DELETE</code> <code><b>192.168.18.30:3000/api/teams/remove-member</b></code> <code>(Remove an employee from a team)</code></summary>
+
+##### Request
+
+```json
+{
+  "teams_id": 3,
+  "user_id": 138
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Employee has been successfully removed from the team"
+}
+```
+
+</details>
+
+<details>
+ <summary><code>DELETE</code> <code><b>192.168.18.30:3000/api/teams/delete</b></code> <code>(Delete a team)</code></summary>
+
+##### Request
+
+```json
+{
+  "team_id": 3
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Team has been successfully deleted"
 }
 ```
 

@@ -53,6 +53,18 @@ class ProjectService {
       WHERE id=$1::integer
     `, [project_id])
   }
+
+  static ASSIGN_PROJECT = async (team_id: number, project_id: number) => {
+    await query(`
+    INSERT INTO project_team (
+      project_id,
+      team_id
+    ) VALUES (
+      $1,
+      $2
+    )
+    `, [team_id, project_id])
+  }
 }
 
 export default ProjectService

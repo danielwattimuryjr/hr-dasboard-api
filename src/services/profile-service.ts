@@ -5,9 +5,15 @@ class ProfileService {
   static GET_PROFILE = async (employee_id: number) => {
     const getProfileResult = await query<Employee>(`
       SELECT
-        *
-      FROM public."users"
-      WHERE id=$1::integer
+        u.id,
+        u.email,
+        u.full_name,
+        u.username,
+        u.phone,
+        r.display_name as role
+      FROM public."users" u
+      JOIN roles r ON u.role_id = r.id
+      WHERE u.id=$1::integer
     `, [employee_id])
 
     return getProfileResult?.rows.at(0)

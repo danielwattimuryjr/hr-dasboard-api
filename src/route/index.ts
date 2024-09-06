@@ -1,4 +1,5 @@
 import employeeRouter from "./employee-route";
+import teamRoute from "./team-route";
 import taskRouter from "./task-route";
 import profileRoute from "./profile-route";
 import chartRouter from "./chart-route";
@@ -16,4 +17,5 @@ export {
   absenceRoute,
   projectRoute,
   roleRoute,
+  teamRoute
 };

@@ -416,7 +416,7 @@ var require_lib = __commonJS({
 
 // src/server.ts
 var import_config = require("dotenv/config");
-var import_express9 = __toESM(require("express"));
+var import_express10 = __toESM(require("express"));
 var import_cors = __toESM(require_lib());
 var import_helmet = __toESM(require("helmet"));
 
@@ -559,7 +559,13 @@ _EmployeeService.GET_ALL = (limit, currentPage, searchStr) => __async(_EmployeeS
   queryParams.push((currentPage - 1) * limit);
   const whereClause = whereClauses.length > 0 ? " WHERE " + whereClauses.join(" AND ") : "";
   const queryString = `
-      SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role
+      SELECT 
+        u.id, 
+        u.email, 
+        u.full_name AS name, 
+        u.phone, 
+        r.display_name AS role,
+        u.level
       FROM users u 
       LEFT JOIN roles r ON u.role_id = r.id
       ${whereClause}
@@ -590,8 +596,12 @@ _EmployeeService.GET_ALL = (limit, currentPage, searchStr) => __async(_EmployeeS
 _EmployeeService.GET_BY_ID = (employeeId) => __async(_EmployeeService, null, function* () {
   const fethUserInfoByIdResult = yield query(`
     SELECT
-      u.*, 
-      r.display_name AS role
+      u.id, 
+      u.email, 
+      u.full_name AS name, 
+      u.phone, 
+      r.display_name AS role,
+      u.level
     FROM public."users" u
     LEFT JOIN roles r ON u.role_id = r.id
     WHERE u.id = $1::integer
@@ -605,7 +615,7 @@ _EmployeeService.DELETE = (employeeId) => __async(_EmployeeService, null, functi
     `, [employeeId]);
 });
 _EmployeeService.STORE = (employee) => __async(_EmployeeService, null, function* () {
-  const { email, full_name, username, password, phone, role_id } = employee;
+  const { email, full_name, username, password, phone, role_id, level } = employee;
   const storeEmployeeResult = yield query(`
     INSERT INTO public."users" (
       email,
@@ -613,14 +623,15 @@ _EmployeeService.STORE = (employee) => __async(_EmployeeService, null, function*
       username,
       password,
       role_id,
-      phone
-    ) VALUES ($1, $2, $3, $4, $5::integer, $6) 
+      phone,
+      level
+    ) VALUES ($1, $2, $3, $4, $5::integer, $6, $7) 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone]);
+    `, [email, full_name, username, password, role_id, phone, level]);
   return storeEmployeeResult == null ? void 0 : storeEmployeeResult.rows.at(0);
 });
 _EmployeeService.UPDATE = (employee_id, employee) => __async(_EmployeeService, null, function* () {
-  const { email, full_name, username, password, phone, role_id } = employee;
+  const { email, full_name, username, password, phone, role_id, level } = employee;
   const updateEmployeeResult = yield query(`
     UPDATE public."users"
     SET 
@@ -629,11 +640,18 @@ _EmployeeService.UPDATE = (employee_id, employee) => __async(_EmployeeService, n
       username=$3, 
       password=$4, 
       role_id=$5::integer,
-      phone=$6
-    WHERE id=$7::integer 
+      phone=$6,
+      level=$7
+    WHERE id=$8::integer 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, employee_id]);
+    `, [email, full_name, username, password, role_id, phone, level, employee_id]);
   return updateEmployeeResult == null ? void 0 : updateEmployeeResult.rows.at(0);
+});
+_EmployeeService.GET_EMPLOYEE_LEVEL = (user_id) => __async(_EmployeeService, null, function* () {
+  const result = yield query(`
+    SELECT level FROM public."users" WHERE id=$1::integer
+  `, [user_id]);
+  return result == null ? void 0 : result.rows.at(0);
 });
 var EmployeeService = _EmployeeService;
 var employee_service_default = EmployeeService;
@@ -731,13 +749,17 @@ var CreateUserSchema = import_zod2.z.object({
   password: import_zod2.z.string({ message: "The password field is required" }).min(1, { message: "The password field cannot be empty" }).max(100, { message: "The password cannot exceed 100 characters" }),
   full_name: import_zod2.z.string({ message: "The full name field is required" }).min(1, { message: "The full name field cannot be empty" }).max(100, { message: "The full name cannot exceed 100 characters" }),
   username: import_zod2.z.string({ message: "The username field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" }),
-  role_id: import_zod2.z.number({ message: "The role ID field is required" }).min(1, { message: "Role ID must be at least 1" })
+  role_id: import_zod2.z.number({ message: "The role ID field is required" }).min(1, { message: "Role ID must be at least 1" }),
+  phone: import_zod2.z.string({ message: "The phone field is required" }),
+  level: import_zod2.z.enum(["hr", "employee", "lead"], { message: "The value you provide is not acceptable" })
 });
 var UpdateUserProfileSchema = import_zod2.z.object({
   email: import_zod2.z.string({ message: "The email field is required" }).email({ message: "Please provide a valid email address" }).min(1, { message: "The email field cannot be empty" }).max(100, { message: "The email address cannot exceed 100 characters" }),
   password: import_zod2.z.string({ message: "The password field is required" }).min(1, { message: "The password field cannot be empty" }).max(100, { message: "The password cannot exceed 100 characters" }),
   full_name: import_zod2.z.string({ message: "The full name field is required" }).min(1, { message: "The full name field cannot be empty" }).max(100, { message: "The full name cannot exceed 100 characters" }),
-  username: import_zod2.z.string({ message: "The username field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" })
+  username: import_zod2.z.string({ message: "The username field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" }),
+  role_id: import_zod2.z.number({ message: "The role_id field is required" }).min(1, { message: "The username field cannot be empty" }),
+  phone: import_zod2.z.string({ message: "The phone field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" })
 });
 
 // src/route/employee-route.ts
@@ -750,8 +772,227 @@ route.get("/:user_id", getEmployeeById);
 route.put("/:user_id?", validateData(UpdateUserProfileSchema), updateEmployee);
 var employee_route_default = route;
 
-// src/route/task-route.ts
+// src/route/team-route.ts
 var import_express2 = __toESM(require("express"));
+
+// src/services/team-service.ts
+var _TeamService = class _TeamService {
+};
+_TeamService.CREATE_TEAM = (team) => __async(_TeamService, null, function* () {
+  const result = yield query(`
+    INSERT INTO teams (
+      name
+    ) VALUES ($1)
+    RETURNING *
+    `, [team.name]);
+  return result == null ? void 0 : result.rows.at(0);
+});
+_TeamService.GET = () => __async(_TeamService, null, function* () {
+  const result = yield query(`
+      SELECT 
+        * 
+      FROM teams
+      ORDER BY id ASC
+    `);
+  return result == null ? void 0 : result.rows;
+});
+_TeamService.GET_BY_ID = (team_id) => __async(_TeamService, null, function* () {
+  const result = yield query(`
+    SELECT
+      *
+    FROM teams
+    WHERE id=$1::integer
+    `, [team_id]);
+  return result == null ? void 0 : result.rows.at(0);
+});
+_TeamService.GET_TEAM_MEMBER = (team_id) => __async(_TeamService, null, function* () {
+  const result = yield query(`
+      SELECT
+        u.email,
+        u.full_name,
+        u.username,
+        u.phone,
+        r.display_name AS role,
+        u.level
+      FROM team_user tu
+      JOIN public."users" u ON tu.user_id=u.id
+      JOIN roles r ON u.role_id=r.id
+      WHERE team_id=$1::integer
+    `, [team_id]);
+  return result == null ? void 0 : result.rows;
+});
+_TeamService.ADD_MEMBER = (user_id, team_id) => __async(_TeamService, null, function* () {
+  const result = yield query(`
+      INSERT INTO team_user (
+        user_id,
+        team_id
+      ) VALUES ($1::integer, $2::integer)
+      RETURNING *
+    `, [user_id, team_id]);
+  return result == null ? void 0 : result.rows.at(0);
+});
+_TeamService.REMOVE_MEMBER = (user_id, team_id) => __async(_TeamService, null, function* () {
+  yield query(`
+      DELETE FROM team_user
+      WHERE user_id=$1::integer
+      AND team_id=$2::integer
+    `, [user_id, team_id]);
+});
+_TeamService.CHECK_MEMBER_EXISTANCE = (user_id, team_id) => __async(_TeamService, null, function* () {
+  const result = yield query(`
+      SELECT
+        *
+      FROM team_user
+      WHERE
+        user_id=$1::integer
+      AND team_id=$2::integer
+    `, [user_id, team_id]);
+  return (result == null ? void 0 : result.rowCount) ? true : false;
+});
+_TeamService.DELETE_TEAM = (team_id) => __async(_TeamService, null, function* () {
+  yield query(`
+      DELETE FROM teams
+      WHERE id=$1::integer
+    `, [team_id]);
+  yield query(`
+      DELETE FROM team_user
+      WHERE team_id=$1::integer
+    `, [team_id]);
+});
+_TeamService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamService, null, function* () {
+  const result = yield query(`
+    SELECT 1 FROM team_user tu
+    JOIN public."users" u ON tu.user_id = u.id
+    WHERE tu.team_id = $1::integer
+    AND u.level = 'lead'
+  `, [team_id]);
+  return (result == null ? void 0 : result.rowCount) ? true : false;
+});
+var TeamService = _TeamService;
+var team_service_default = TeamService;
+
+// src/controller/team-controller.ts
+var _TeamController = class _TeamController {
+};
+_TeamController.INDEX = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const result = yield team_service_default.GET();
+  res.status(200).json({
+    status: 200,
+    success: true,
+    data: result
+  });
+}));
+// SHOW
+_TeamController.SHOW = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const team_id = Number(req.body.team_id);
+  const teamDetailsResult = yield team_service_default.GET_BY_ID(team_id);
+  const memberResult = yield team_service_default.GET_TEAM_MEMBER(team_id);
+  res.status(200).json({
+    status: 200,
+    success: true,
+    data: {
+      team: teamDetailsResult,
+      members: memberResult
+    }
+  });
+}));
+_TeamController.CREATE_TEAM = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const result = yield team_service_default.CREATE_TEAM(req.body);
+  res.status(201).json({
+    status: 201,
+    success: true,
+    message: "Team has been created sucessfully",
+    data: result
+  });
+}));
+_TeamController.ADD_MEMBER = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const user_id = Number(req.body.user_id);
+  const team_id = Number(req.body.team_id);
+  const validation = yield Validation.validateMembership(user_id, team_id);
+  if (!validation.valid) {
+    return res.status(403).json({
+      status: 403,
+      message: validation.message
+    });
+  }
+  const result = yield team_service_default.ADD_MEMBER(
+    user_id,
+    team_id
+  );
+  res.status(201).json({
+    status: 201,
+    success: true,
+    message: `Employee has been successfully added into the team`,
+    data: result
+  });
+}));
+_TeamController.REMOVE_MEMBER = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const user_id = Number(req.body.user_id);
+  const team_id = Number(req.body.team_id);
+  const result = yield team_service_default.REMOVE_MEMBER(user_id, team_id);
+  res.status(200).json({
+    status: 200,
+    success: true,
+    message: `Employee has been successfully removed from the team`,
+    data: result
+  });
+}));
+_TeamController.DESTROY = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const team_id = Number(req.body.team_id);
+  yield team_service_default.DELETE_TEAM(team_id);
+  res.status(200).json({
+    status: 200,
+    success: true,
+    message: `Team has been successfully deleted`
+  });
+}));
+var TeamController = _TeamController;
+var _Validation = class _Validation {
+};
+_Validation.validateMembership = (user_id, team_id) => __async(_Validation, null, function* () {
+  const isMember = yield team_service_default.CHECK_MEMBER_EXISTANCE(user_id, team_id);
+  if (isMember) {
+    return {
+      valid: false,
+      message: "Employee already in the team."
+    };
+  }
+  const user = yield employee_service_default.GET_EMPLOYEE_LEVEL(user_id);
+  if ((user == null ? void 0 : user.level) === "hr") {
+    return {
+      valid: false,
+      message: "HR cannot be added to teams."
+    };
+  }
+  if ((user == null ? void 0 : user.level) === "lead") {
+    const hasLead = yield team_service_default.CHECK_LEAD_EXISTENCE(team_id);
+    if (hasLead) {
+      return {
+        valid: false,
+        message: "This team already has a lead."
+      };
+    }
+  }
+  return {
+    valid: true,
+    message: ""
+  };
+});
+var Validation = _Validation;
+var team_controller_default = TeamController;
+
+// src/route/team-route.ts
+var route2 = import_express2.default.Router();
+route2.get("/", team_controller_default.INDEX);
+route2.post("/", team_controller_default.CREATE_TEAM);
+route2.get("/show", team_controller_default.SHOW);
+route2.post("/add-member", team_controller_default.ADD_MEMBER);
+route2.delete("/remove-member", team_controller_default.REMOVE_MEMBER);
+route2.delete("/delete", team_controller_default.DESTROY);
+var team_route_default = route2;
+
+// src/route/task-route.ts
+var import_express3 = __toESM(require("express"));
 
 // src/controller/task-controller.ts
 var import_http_status_codes5 = require("http-status-codes");
@@ -921,14 +1162,14 @@ var taskDataSchema = import_zod3.z.object({
 });
 
 // src/route/task-route.ts
-var route2 = import_express2.default.Router();
-route2.post("/", validateData(taskDataSchema), saveTask);
-route2.get("/", getTaskByUserId);
-route2.delete("/:task_id", deleteTask);
-var task_route_default = route2;
+var route3 = import_express3.default.Router();
+route3.post("/", validateData(taskDataSchema), saveTask);
+route3.get("/", getTaskByUserId);
+route3.delete("/:task_id", deleteTask);
+var task_route_default = route3;
 
 // src/route/profile-route.ts
-var import_express3 = __toESM(require("express"));
+var import_express4 = __toESM(require("express"));
 
 // src/services/profile-service.ts
 var _ProfileService = class _ProfileService {
@@ -936,9 +1177,15 @@ var _ProfileService = class _ProfileService {
 _ProfileService.GET_PROFILE = (employee_id) => __async(_ProfileService, null, function* () {
   const getProfileResult = yield query(`
       SELECT
-        *
-      FROM public."users"
-      WHERE id=$1::integer
+        u.id,
+        u.email,
+        u.full_name,
+        u.username,
+        u.phone,
+        r.display_name as role
+      FROM public."users" u
+      JOIN roles r ON u.role_id = r.id
+      WHERE u.id=$1::integer
     `, [employee_id]);
   return getProfileResult == null ? void 0 : getProfileResult.rows.at(0);
 });
@@ -973,7 +1220,7 @@ var getProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
   res.status(200).json({
     status: 200,
     success: true,
-    data: result
+    data: __spreadProps(__spreadValues({}, result), { image: `http://192.168.18.30:3000/profile_pic/placeholder.png` })
   });
 }));
 var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* () {
@@ -995,12 +1242,13 @@ var updateProfile = asyncHandler((req, res) => __async(void 0, null, function* (
 }));
 
 // src/route/profile-route.ts
-var route3 = import_express3.default.Router();
-route3.get("/", getProfile);
-route3.put("/", updateProfile);
+var route4 = import_express4.default.Router();
+route4.get("/", getProfile);
+route4.put("/", updateProfile);
+var profile_route_default = route4;
 
 // src/route/chart-route.ts
-var import_express4 = __toESM(require("express"));
+var import_express5 = __toESM(require("express"));
 
 // src/controller/chart-controller.ts
 var import_http_status_codes6 = require("http-status-codes");
@@ -1100,12 +1348,12 @@ var calculateWorkingHours = (start, end) => {
 };
 
 // src/route/chart-route.ts
-var route4 = import_express4.default.Router();
-route4.get("/:model", getChartData);
-var chart_route_default = route4;
+var route5 = import_express5.default.Router();
+route5.get("/:model", getChartData);
+var chart_route_default = route5;
 
 // src/route/auth-route.ts
-var import_express5 = __toESM(require("express"));
+var import_express6 = __toESM(require("express"));
 
 // src/controller/auth-controller.ts
 var import_http_status_codes7 = require("http-status-codes");
@@ -1122,6 +1370,7 @@ _AuthService.LOGIN = (loginRequest) => __async(_AuthService, null, function* () 
         u.full_name, 
         u.username, 
         u.phone,
+        u.level,
         r.role_name, 
         r.display_name
       FROM 
@@ -1164,13 +1413,13 @@ var logout = (req, res) => {
 };
 
 // src/route/auth-route.ts
-var route5 = import_express5.default.Router();
-route5.post("/", login);
-route5.post("/logout", logout);
-var auth_route_default = route5;
+var route6 = import_express6.default.Router();
+route6.post("/", login);
+route6.post("/logout", logout);
+var auth_route_default = route6;
 
 // src/route/absence-route.ts
-var import_express6 = __toESM(require("express"));
+var import_express7 = __toESM(require("express"));
 
 // src/controller/absence-controller.ts
 var import_http_status_codes8 = require("http-status-codes");
@@ -1411,16 +1660,16 @@ var absenceApprovalSchema = import_zod4.z.object({
 });
 
 // src/route/absence-route.ts
-var route6 = import_express6.default.Router();
-route6.get("/", getAbsenceData);
-route6.get("/history", getAbsenceDataTest);
-route6.post("/", validateData(absenceSchema), createNewAbsence);
-route6.put("/:absence_id", validateData(absenceApprovalSchema), approveAbsenceData);
-route6.delete("/:absence_id", deleteAbsence);
-var absence_route_default = route6;
+var route7 = import_express7.default.Router();
+route7.get("/", getAbsenceData);
+route7.get("/history", getAbsenceDataTest);
+route7.post("/", validateData(absenceSchema), createNewAbsence);
+route7.put("/:absence_id", validateData(absenceApprovalSchema), approveAbsenceData);
+route7.delete("/:absence_id", deleteAbsence);
+var absence_route_default = route7;
 
 // src/route/project-route.ts
-var import_express7 = __toESM(require("express"));
+var import_express8 = __toESM(require("express"));
 
 // src/controller/project-controller.ts
 var import_http_status_codes9 = require("http-status-codes");
@@ -1470,6 +1719,17 @@ _ProjectService.DELETE = (project_id) => __async(_ProjectService, null, function
       DELETE FROM projects
       WHERE id=$1::integer
     `, [project_id]);
+});
+_ProjectService.ASSIGN_PROJECT = (team_id, project_id) => __async(_ProjectService, null, function* () {
+  yield query(`
+    INSERT INTO project_team (
+      project_id,
+      team_id
+    ) VALUES (
+      $1,
+      $2
+    )
+    `, [team_id, project_id]);
 });
 var ProjectService = _ProjectService;
 var project_service_default = ProjectService;
@@ -1529,16 +1789,16 @@ var deleteProject = asyncHandler((req, res) => __async(void 0, null, function* (
 }));
 
 // src/route/project-route.ts
-var route7 = import_express7.default.Router();
-route7.get("/", getAllProject);
-route7.get("/:project_id", getProjectById);
-route7.post("/", createNewProject);
-route7.put("/:project_id", updateProject);
-route7.delete("/:project_id", deleteProject);
-var project_route_default = route7;
+var route8 = import_express8.default.Router();
+route8.get("/", getAllProject);
+route8.get("/:project_id", getProjectById);
+route8.post("/", createNewProject);
+route8.put("/:project_id", updateProject);
+route8.delete("/:project_id", deleteProject);
+var project_route_default = route8;
 
 // src/route/role-route.ts
-var import_express8 = __toESM(require("express"));
+var import_express9 = __toESM(require("express"));
 
 // src/controller/role-controller.ts
 var import_http_status_codes10 = require("http-status-codes");
@@ -1653,32 +1913,34 @@ var deleteRole = asyncHandler((req, res) => __async(void 0, null, function* () {
 }));
 
 // src/route/role-route.ts
-var route8 = import_express8.default.Router();
-route8.get("/", getAllRole);
-route8.get("/:role_id", getRoleById);
-route8.post("/", createNewRole);
-route8.put("/:role_id", updateRole);
-route8.delete("/:role_id", deleteRole);
-var role_route_default = route8;
+var route9 = import_express9.default.Router();
+route9.get("/", getAllRole);
+route9.get("/:role_id", getRoleById);
+route9.post("/", createNewRole);
+route9.put("/:role_id", updateRole);
+route9.delete("/:role_id", deleteRole);
+var role_route_default = route9;
 
 // src/server.ts
 require("dotenv").config();
 var asyncHandler2 = () => __async(exports, null, function* () {
   yield pg_default.connect();
-  const app = (0, import_express9.default)();
+  const app = (0, import_express10.default)();
   const PORT = process.env.PORT || 8080;
   app.use((0, import_cookie_parser.default)());
   app.use((0, import_helmet.default)());
   app.use((0, import_cors.default)());
-  app.use(import_express9.default.json());
-  app.use(import_express9.default.urlencoded({ extended: true }));
-  app.use(import_express9.default.static("public"));
+  app.use(import_express10.default.json());
+  app.use(import_express10.default.urlencoded({ extended: true }));
+  app.use(import_express10.default.static("public"));
   app.use("/api/auth/", auth_route_default);
   app.use("/api/employees/", employee_route_default);
-  app.use("/api/tasks/", task_route_default);
+  app.use("/api/tasks/", verifyToken, task_route_default);
   app.use("/api/charts/", verifyToken, chart_route_default);
+  app.use("/api/profiles/", verifyToken, profile_route_default);
   app.use("/api/absences/", verifyToken, absence_route_default);
   app.use("/api/projects/", project_route_default);
+  app.use("/api/teams/", team_route_default);
   app.use("/api/roles/", role_route_default);
   app.use(notFoundHandler);
   app.use(errorHandler);

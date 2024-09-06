@@ -19,7 +19,7 @@ const getProfile = asyncHandler(async (req: Request, res: ProfileResponse<Employ
   res.status(200).json({
     status: 200,
     success: true,
-    data: result
+    data: { ...result, image: `http://192.168.18.30:3000/profile_pic/placeholder.png` }
   })
 })
 

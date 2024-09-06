@@ -10,6 +10,7 @@ class AuthService {
         u.full_name, 
         u.username, 
         u.phone,
+        u.level,
         r.role_name, 
         r.display_name
       FROM 

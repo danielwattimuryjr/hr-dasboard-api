@@ -19,7 +19,11 @@ export const CreateUserSchema = z.object({
     .max(100, { message: "The username cannot exceed 100 characters" }),
 
   role_id: z.number({ message: "The role ID field is required" })
-    .min(1, { message: "Role ID must be at least 1" })
+    .min(1, { message: "Role ID must be at least 1" }),
+
+  phone: z.string({ message: "The phone field is required" }),
+
+  level: z.enum(['hr', 'employee', 'lead'], { message: "The value you provide is not acceptable" })
 });
 
 export const UpdateUserProfileSchema = z.object({
@@ -37,6 +41,13 @@ export const UpdateUserProfileSchema = z.object({
     .max(100, { message: "The full name cannot exceed 100 characters" }),
 
   username: z.string({ message: "The username field is required" })
+    .min(1, { message: "The username field cannot be empty" })
+    .max(100, { message: "The username cannot exceed 100 characters" }),
+
+  role_id: z.number({ message: "The role_id field is required" })
+    .min(1, { message: "The username field cannot be empty" }),
+
+  phone: z.string({ message: "The phone field is required" })
     .min(1, { message: "The username field cannot be empty" })
     .max(100, { message: "The username cannot exceed 100 characters" }),
 });

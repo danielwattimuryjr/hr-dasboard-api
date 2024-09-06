@@ -34,7 +34,13 @@ class EmployeeService {
     const whereClause = whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : '';
 
     const queryString = `
-      SELECT u.id, u.email, u.full_name AS name, u.phone, r.display_name AS role
+      SELECT 
+        u.id, 
+        u.email, 
+        u.full_name AS name, 
+        u.phone, 
+        r.display_name AS role,
+        u.level
       FROM users u 
       LEFT JOIN roles r ON u.role_id = r.id
       ${whereClause}
@@ -70,8 +76,12 @@ class EmployeeService {
   static GET_BY_ID = async (employeeId: number): Promise<Employee | undefined> => {
     const fethUserInfoByIdResult = await query<Employee>(`
     SELECT
-      u.*, 
-      r.display_name AS role
+      u.id, 
+      u.email, 
+      u.full_name AS name, 
+      u.phone, 
+      r.display_name AS role,
+      u.level
     FROM public."users" u
     LEFT JOIN roles r ON u.role_id = r.id
     WHERE u.id = $1::integer
@@ -88,7 +98,7 @@ class EmployeeService {
   }
 
   static STORE = async (employee: Employee): Promise<Employee | undefined> => {
-    const { email, full_name, username, password, phone, role_id } = employee
+    const { email, full_name, username, password, phone, role_id, level } = employee
 
     const storeEmployeeResult = await query<Employee>(`
     INSERT INTO public."users" (
@@ -97,16 +107,17 @@ class EmployeeService {
       username,
       password,
       role_id,
-      phone
-    ) VALUES ($1, $2, $3, $4, $5::integer, $6) 
+      phone,
+      level
+    ) VALUES ($1, $2, $3, $4, $5::integer, $6, $7) 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone])
+    `, [email, full_name, username, password, role_id, phone, level])
 
     return storeEmployeeResult?.rows.at(0)
   }
 
   static UPDATE = async (employee_id: number, employee: Employee): Promise<Employee | undefined> => {
-    const { email, full_name, username, password, phone, role_id } = employee
+    const { email, full_name, username, password, phone, role_id, level } = employee
 
     const updateEmployeeResult = await query<Employee>(`
     UPDATE public."users"
@@ -116,13 +127,23 @@ class EmployeeService {
       username=$3, 
       password=$4, 
       role_id=$5::integer,
-      phone=$6
-    WHERE id=$7::integer 
+      phone=$6,
+      level=$7
+    WHERE id=$8::integer 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, employee_id])
+    `, [email, full_name, username, password, role_id, phone, level, employee_id])
 
     return updateEmployeeResult?.rows.at(0)
   }
+
+  static GET_EMPLOYEE_LEVEL = async (user_id: number) => {
+    const result = await query<Employee>(`
+    SELECT level FROM public."users" WHERE id=$1::integer
+  `, [user_id]);
+
+    return result?.rows.at(0);
+  };
+
 }
 
 export default EmployeeService

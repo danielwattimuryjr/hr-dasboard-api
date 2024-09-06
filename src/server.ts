@@ -18,7 +18,8 @@ import {
   profileRoute,
   projectRoute,
   roleRoute,
-  taskRouter
+  taskRouter,
+  teamRoute
 } from './route';
 
 const asyncHandler = async () => {
@@ -37,11 +38,12 @@ const asyncHandler = async () => {
 
   app.use('/api/auth/', authRouter)
   app.use('/api/employees/', employeeRouter)
-  app.use('/api/tasks/', taskRouter)
+  app.use('/api/tasks/', verifyToken, taskRouter)
   app.use('/api/charts/', verifyToken, chartRouter)
-  // app.use('/api/profiles/', verifyToken, profileRoute)
+  app.use('/api/profiles/', verifyToken, profileRoute)
   app.use('/api/absences/', verifyToken, absenceRoute)
   app.use('/api/projects/', projectRoute)
+  app.use('/api/teams/', teamRoute)
   app.use('/api/roles/', roleRoute)
 
   app.use(notFoundHandler);
