@@ -1,11 +1,11 @@
 import express from "express"
-import { createNewRole, deleteRole, getAllRole, getRoleById, updateRole } from "../controller/role-controller";
+import RoleController from "../controller/role-controller";
 const route = express.Router();
 
-route.get('/', getAllRole)
-route.get('/:role_id', getRoleById)
-route.post('/', createNewRole)
-route.put('/:role_id', updateRole)
-route.delete('/:role_id', deleteRole)
+route.get('/', RoleController.GET)
+route.get('/:role_id', RoleController.SHOW)
+route.post('/', RoleController.POST)
+route.put('/:role_id', RoleController.UPDATE)
+route.delete('/:role_id', RoleController.DELETE)
 
 export default route;

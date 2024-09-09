@@ -83,9 +83,7 @@ export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: Emp
 // @desc Update Current User Profile
 // @route PUT /api/employees
 export const updateEmployee = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
-  const user_id = Number(req.params.user_id);
-
-  const result = await EmployeeService.UPDATE(user_id, req.body)
+  const result = await EmployeeService.UPDATE(req.body)
 
   res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,

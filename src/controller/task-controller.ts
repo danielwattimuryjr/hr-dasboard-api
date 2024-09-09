@@ -4,73 +4,76 @@ import { ErrorResponse, SuccessResponse, Task } from "../types";
 import { StatusCodes } from "http-status-codes";
 import { asyncHandler } from "../helper/async-helper";
 import TaskService from "../services/task-service";
+import EmployeeService from "../services/employee-service";
+import TeamUserService from "../services/team-role-service";
 
 type TaskRequest = Request<{}, SuccessResponse<Task[]>, {
   data: Task[]
 }>
 
-// @desc  Save a new task
-// @route POST /api/tasks/
-export const saveTask = asyncHandler(async (req: TaskRequest, res: Response) => {
-  const tasks = req.body.data;
-  const user_id = req.user?.id;
+class TaskController {
+  static SAVE = asyncHandler(async (req: TaskRequest, res: Response) => {
+    const tasks = req.body.data;
+    const user_id = req.user?.id;
 
-  if (!user_id) {
-    return res.status(400).json({
-      status: 400,
-      message: `User id is not specified`
-    } as ErrorResponse)
-  }
+    if (!user_id) {
+      return res.status(400).json({
+        status: 400,
+        message: `User id is not specified`
+      } as ErrorResponse)
+    }
 
-  const result = await TaskService.STORE(user_id, tasks)
+    // Validate 
 
-  const successResponse: SuccessResponse<Task[]> = {
-    status: StatusCodes.CREATED,
-    success: true,
-    message: `Report created succesfully for user ${user_id}`,
-    data: result
-  }
+    const result = await TaskService.STORE(user_id, tasks)
 
-  res.status(StatusCodes.OK).json(successResponse)
-})
+    const successResponse: SuccessResponse<Task[]> = {
+      status: StatusCodes.CREATED,
+      success: true,
+      message: `Report created succesfully for user ${user_id}`,
+      data: result
+    }
 
-// @desc  Get all tasks for a certain user
-// @route GET /api/tasks/
-export const getTaskByUserId = asyncHandler(async (req: TaskRequest, res: Response) => {
-  const employee_id = req.user?.id;
+    res.status(StatusCodes.OK).json(successResponse)
+  })
 
-  if (!employee_id) {
-    return res.status(400).json({
-      status: 400,
-      message: `User id is not specified`
-    } as ErrorResponse)
-  }
-  // const user_id = 126
+  static GET_BY_ID = asyncHandler(async (req: TaskRequest, res: Response) => {
+    const employee_id = req.user?.id;
 
-  const result = await TaskService.GET_BY_EMPLOYEE_ID(employee_id);
+    if (!employee_id) {
+      return res.status(400).json({
+        status: 400,
+        message: `User id is not specified`
+      } as ErrorResponse)
+    }
+    // const user_id = 126
 
-  const successResponse: SuccessResponse<any> = {
-    status: StatusCodes.OK,
-    success: true,
-    data: result
-  };
+    const result = await TaskService.GET_BY_EMPLOYEE_ID(employee_id);
 
-  res.status(StatusCodes.OK).json(successResponse);
-});
+    const successResponse: SuccessResponse<any> = {
+      status: StatusCodes.OK,
+      success: true,
+      data: result
+    };
 
-// @desc  Delete a task
-// @route DELETE /api/tasks/:task_id
-export const deleteTask = asyncHandler(async (req: Request, res: Response) => {
-  const task_id = Number(req.params.task_id);
+    res.status(StatusCodes.OK).json(successResponse);
+  })
 
-  await TaskService.DELETE(task_id)
+  static DELETE = asyncHandler(async (req: Request, res: Response) => {
+    const task_id = Number(req.params.task_id);
 
-  const successResponse: SuccessResponse<any> = {
-    status: StatusCodes.OK,
-    success: true,
-    message: `Task with id ${task_id} has been deleted`
-  }
+    await TaskService.DELETE(task_id)
 
-  res.status(StatusCodes.OK).json(successResponse)
-})
+    const successResponse: SuccessResponse<any> = {
+      status: StatusCodes.OK,
+      success: true,
+      message: `Task with id ${task_id} has been deleted`
+    }
+
+    res.status(StatusCodes.OK).json(successResponse)
+  })
+}
+
+export default TaskController
+
 

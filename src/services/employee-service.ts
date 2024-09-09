@@ -79,7 +79,8 @@ class EmployeeService {
       u.id, 
       u.email, 
       u.full_name AS name, 
-      u.phone, 
+      u.phone,
+      u.role_id,
       r.display_name AS role,
       u.level
     FROM public."users" u
@@ -116,8 +117,8 @@ class EmployeeService {
     return storeEmployeeResult?.rows.at(0)
   }
 
-  static UPDATE = async (employee_id: number, employee: Employee): Promise<Employee | undefined> => {
-    const { email, full_name, username, password, phone, role_id, level } = employee
+  static UPDATE = async (employee: Employee): Promise<Employee | undefined> => {
+    const { email, full_name, username, password, phone, role_id, level, id } = employee
 
     const updateEmployeeResult = await query<Employee>(`
     UPDATE public."users"
@@ -131,7 +132,7 @@ class EmployeeService {
       level=$7
     WHERE id=$8::integer 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, level, employee_id])
+    `, [email, full_name, username, password, role_id, phone, level, id])
 
     return updateEmployeeResult?.rows.at(0)
   }

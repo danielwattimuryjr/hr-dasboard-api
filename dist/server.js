@@ -599,7 +599,8 @@ _EmployeeService.GET_BY_ID = (employeeId) => __async(_EmployeeService, null, fun
       u.id, 
       u.email, 
       u.full_name AS name, 
-      u.phone, 
+      u.phone,
+      u.role_id,
       r.display_name AS role,
       u.level
     FROM public."users" u
@@ -630,8 +631,8 @@ _EmployeeService.STORE = (employee) => __async(_EmployeeService, null, function*
     `, [email, full_name, username, password, role_id, phone, level]);
   return storeEmployeeResult == null ? void 0 : storeEmployeeResult.rows.at(0);
 });
-_EmployeeService.UPDATE = (employee_id, employee) => __async(_EmployeeService, null, function* () {
-  const { email, full_name, username, password, phone, role_id, level } = employee;
+_EmployeeService.UPDATE = (employee) => __async(_EmployeeService, null, function* () {
+  const { email, full_name, username, password, phone, role_id, level, id } = employee;
   const updateEmployeeResult = yield query(`
     UPDATE public."users"
     SET 
@@ -644,7 +645,7 @@ _EmployeeService.UPDATE = (employee_id, employee) => __async(_EmployeeService, n
       level=$7
     WHERE id=$8::integer 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, level, employee_id]);
+    `, [email, full_name, username, password, role_id, phone, level, id]);
   return updateEmployeeResult == null ? void 0 : updateEmployeeResult.rows.at(0);
 });
 _EmployeeService.GET_EMPLOYEE_LEVEL = (user_id) => __async(_EmployeeService, null, function* () {
@@ -706,8 +707,7 @@ var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* 
   });
 }));
 var updateEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const user_id = Number(req.params.user_id);
-  const result = yield employee_service_default.UPDATE(user_id, req.body);
+  const result = yield employee_service_default.UPDATE(req.body);
   res.status(import_http_status_codes3.StatusCodes.OK).json({
     status: import_http_status_codes3.StatusCodes.OK,
     success: true,
@@ -769,7 +769,7 @@ route.get("/client", getAllEmployessClient);
 route.post("/", validateData(CreateUserSchema), createEmployee);
 route.delete("/:user_id", deleteEmployee);
 route.get("/:user_id", getEmployeeById);
-route.put("/:user_id?", validateData(UpdateUserProfileSchema), updateEmployee);
+route.put("/", validateData(UpdateUserProfileSchema), updateEmployee);
 var employee_route_default = route;
 
 // src/route/team-route.ts
@@ -819,9 +819,9 @@ var TeamService = _TeamService;
 var team_service_default = TeamService;
 
 // src/services/team-role-service.ts
-var _TeamRoleService = class _TeamRoleService {
+var _TeamUserService = class _TeamUserService {
 };
-_TeamRoleService.GET_TEAM_MEMBER = (team_id) => __async(_TeamRoleService, null, function* () {
+_TeamUserService.GET_TEAM_MEMBER = (team_id) => __async(_TeamUserService, null, function* () {
   const result = yield query(`
       SELECT
         u.email,
@@ -837,7 +837,18 @@ _TeamRoleService.GET_TEAM_MEMBER = (team_id) => __async(_TeamRoleService, null, 
     `, [team_id]);
   return result == null ? void 0 : result.rows;
 });
-_TeamRoleService.ADD_MEMBER = (user_id, team_id) => __async(_TeamRoleService, null, function* () {
+_TeamUserService.GET_USER_TEAM = (user_id) => __async(_TeamUserService, null, function* () {
+  const result = yield query(`
+    SELECT
+      team_id
+    FROM 
+      team_user
+    WHERE
+      user_id=$1::integer
+    `, [user_id]);
+  return result == null ? void 0 : result.rows;
+});
+_TeamUserService.ADD_MEMBER = (user_id, team_id) => __async(_TeamUserService, null, function* () {
   const result = yield query(`
       INSERT INTO team_user (
         user_id,
@@ -847,25 +858,26 @@ _TeamRoleService.ADD_MEMBER = (user_id, team_id) => __async(_TeamRoleService, nu
     `, [user_id, team_id]);
   return result == null ? void 0 : result.rows.at(0);
 });
-_TeamRoleService.CHECK_MEMBER_EXISTANCE = (user_id, team_id) => __async(_TeamRoleService, null, function* () {
+_TeamUserService.CHECK_MEMBER_EXISTANCE = (user_id, team_id) => __async(_TeamUserService, null, function* () {
   const result = yield query(`
       SELECT
         *
       FROM team_user
       WHERE
         user_id=$1::integer
-      AND team_id=$2::integer
+      AND 
+        team_id=$2::integer
     `, [user_id, team_id]);
   return (result == null ? void 0 : result.rowCount) ? true : false;
 });
-_TeamRoleService.REMOVE_MEMBER = (user_id, team_id) => __async(_TeamRoleService, null, function* () {
+_TeamUserService.REMOVE_MEMBER = (user_id, team_id) => __async(_TeamUserService, null, function* () {
   yield query(`
       DELETE FROM team_user
       WHERE user_id=$1::integer
       AND team_id=$2::integer
     `, [user_id, team_id]);
 });
-_TeamRoleService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamRoleService, null, function* () {
+_TeamUserService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamUserService, null, function* () {
   const result = yield query(`
     SELECT 1 FROM team_user tu
     JOIN public."users" u ON tu.user_id = u.id
@@ -874,8 +886,8 @@ _TeamRoleService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamRoleService, n
   `, [team_id]);
   return (result == null ? void 0 : result.rowCount) ? true : false;
 });
-var TeamRoleService = _TeamRoleService;
-var team_role_service_default = TeamRoleService;
+var TeamUserService = _TeamUserService;
+var team_role_service_default = TeamUserService;
 
 // src/services/team-project-service.ts
 var _TeamProjectService = class _TeamProjectService {
@@ -1206,7 +1218,9 @@ var TaskService = _TaskService;
 var task_service_default = TaskService;
 
 // src/controller/task-controller.ts
-var saveTask = asyncHandler((req, res) => __async(void 0, null, function* () {
+var _TaskController = class _TaskController {
+};
+_TaskController.SAVE = asyncHandler((req, res) => __async(_TaskController, null, function* () {
   var _a;
   const tasks = req.body.data;
   const user_id = (_a = req.user) == null ? void 0 : _a.id;
@@ -1225,7 +1239,7 @@ var saveTask = asyncHandler((req, res) => __async(void 0, null, function* () {
   };
   res.status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
 }));
-var getTaskByUserId = asyncHandler((req, res) => __async(void 0, null, function* () {
+_TaskController.GET_BY_ID = asyncHandler((req, res) => __async(_TaskController, null, function* () {
   var _a;
   const employee_id = (_a = req.user) == null ? void 0 : _a.id;
   if (!employee_id) {
@@ -1242,7 +1256,7 @@ var getTaskByUserId = asyncHandler((req, res) => __async(void 0, null, function*
   };
   res.status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
 }));
-var deleteTask = asyncHandler((req, res) => __async(void 0, null, function* () {
+_TaskController.DELETE = asyncHandler((req, res) => __async(_TaskController, null, function* () {
   const task_id = Number(req.params.task_id);
   yield task_service_default.DELETE(task_id);
   const successResponse = {
@@ -1252,6 +1266,8 @@ var deleteTask = asyncHandler((req, res) => __async(void 0, null, function* () {
   };
   res.status(import_http_status_codes5.StatusCodes.OK).json(successResponse);
 }));
+var TaskController = _TaskController;
+var task_controller_default = TaskController;
 
 // src/schema/task-schema.ts
 var import_zod3 = require("zod");
@@ -1267,9 +1283,9 @@ var taskDataSchema = import_zod3.z.object({
 
 // src/route/task-route.ts
 var route3 = import_express3.default.Router();
-route3.post("/", validateData(taskDataSchema), saveTask);
-route3.get("/", getTaskByUserId);
-route3.delete("/:task_id", deleteTask);
+route3.post("/", validateData(taskDataSchema), task_controller_default.SAVE);
+route3.get("/", task_controller_default.GET_BY_ID);
+route3.delete("/:task_id", task_controller_default.DELETE);
 var task_route_default = route3;
 
 // src/route/profile-route.ts
@@ -1959,7 +1975,9 @@ var RoleService = _RoleService;
 var role_service_default = RoleService;
 
 // src/controller/role-controller.ts
-var getAllRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+var _RoleController = class _RoleController {
+};
+_RoleController.GET = asyncHandler((req, res) => __async(_RoleController, null, function* () {
   const result = yield role_service_default.GET_ALL();
   res.status(import_http_status_codes10.StatusCodes.OK).json({
     status: import_http_status_codes10.StatusCodes.OK,
@@ -1967,7 +1985,7 @@ var getAllRole = asyncHandler((req, res) => __async(void 0, null, function* () {
     data: result
   });
 }));
-var getRoleById = asyncHandler((req, res) => __async(void 0, null, function* () {
+_RoleController.SHOW = asyncHandler((req, res) => __async(_RoleController, null, function* () {
   const role_id = Number(req.params.role_id);
   if (!role_id) {
     const response = {
@@ -1983,7 +2001,7 @@ var getRoleById = asyncHandler((req, res) => __async(void 0, null, function* () 
     data: result
   });
 }));
-var createNewRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+_RoleController.POST = asyncHandler((req, res) => __async(_RoleController, null, function* () {
   const result = role_service_default.STORE(req.body);
   res.status(import_http_status_codes10.StatusCodes.CREATED).json({
     status: import_http_status_codes10.StatusCodes.CREATED,
@@ -1992,7 +2010,7 @@ var createNewRole = asyncHandler((req, res) => __async(void 0, null, function* (
     data: result
   });
 }));
-var updateRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+_RoleController.UPDATE = asyncHandler((req, res) => __async(_RoleController, null, function* () {
   const role_id = Number(req.params.role_id);
   const result = role_service_default.UPDATE(
     role_id,
@@ -2005,7 +2023,7 @@ var updateRole = asyncHandler((req, res) => __async(void 0, null, function* () {
     data: result
   });
 }));
-var deleteRole = asyncHandler((req, res) => __async(void 0, null, function* () {
+_RoleController.DELETE = asyncHandler((req, res) => __async(_RoleController, null, function* () {
   const role_id = Number(req.params.role_id);
   role_service_default.DELETE(role_id);
   res.status(import_http_status_codes10.StatusCodes.OK).json({
@@ -2014,14 +2032,16 @@ var deleteRole = asyncHandler((req, res) => __async(void 0, null, function* () {
     message: `Role with ID ${role_id} has been deleted`
   });
 }));
+var RoleController = _RoleController;
+var role_controller_default = RoleController;
 
 // src/route/role-route.ts
 var route9 = import_express9.default.Router();
-route9.get("/", getAllRole);
-route9.get("/:role_id", getRoleById);
-route9.post("/", createNewRole);
-route9.put("/:role_id", updateRole);
-route9.delete("/:role_id", deleteRole);
+route9.get("/", role_controller_default.GET);
+route9.get("/:role_id", role_controller_default.SHOW);
+route9.post("/", role_controller_default.POST);
+route9.put("/:role_id", role_controller_default.UPDATE);
+route9.delete("/:role_id", role_controller_default.DELETE);
 var role_route_default = route9;
 
 // src/middleware/level-middleware.ts

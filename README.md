@@ -331,16 +331,20 @@
 </details>
 
 <details>
- <summary><code>PUT</code> <code><b>192.168.18.30:3000/api/employees/{user_id?}</b></code> <code>(Update An Employee)</code></summary>
+ <summary><code>PUT</code> <code><b>192.168.18.30:3000/api/employees</b></code> <code>(Update An Employee)</code></summary>
 
 ##### Request
 
 ```json
 {
+  "id": 128,
   "email": "user2@example.com",
   "full_name": "User Two Edited",
   "username": "user2",
-  "password": "password"
+  "password": "password",
+  "role_id": 2,
+  "phone": "190290921",
+  "level": "hr"
 }
 ```
 
@@ -352,13 +356,15 @@
   "success": true,
   "message": "User updated successfully",
   "data": {
-    "id": 47,
+    "id": 128,
     "email": "user2@example.com",
     "password": "password",
     "full_name": "User Two Edited",
     "username": "user2",
     "role_id": 2,
-    "profile_pic": null
+    "profile_pic": "profile3.jpg",
+    "phone": "190290921",
+    "level": "hr"
   }
 }
 ```

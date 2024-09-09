@@ -9,6 +9,6 @@ route.get('/client', getAllEmployessClient);
 route.post('/', validateData(CreateUserSchema), createEmployee);
 route.delete('/:user_id', deleteEmployee);
 route.get('/:user_id', getEmployeeById);
-route.put('/:user_id?', validateData(UpdateUserProfileSchema), updateEmployee);
+route.put('/', validateData(UpdateUserProfileSchema), updateEmployee);
 
 export default route;

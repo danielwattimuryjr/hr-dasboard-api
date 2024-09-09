@@ -1,7 +1,7 @@
 import { query } from "../libs/pg";
 import { Employee, TeamUser } from "../types";
 
-class TeamRoleService {
+class TeamUserService {
   static GET_TEAM_MEMBER = async (team_id: number) => {
     const result = await query<Employee>(`
       SELECT
@@ -16,6 +16,19 @@ class TeamRoleService {
       JOIN roles r ON u.role_id=r.id
       WHERE team_id=$1::integer
     `, [team_id])
+
+    return result?.rows
+  }
+
+  static GET_USER_TEAM = async (user_id: number) => {
+    const result = await query<{ team_id: number[] }>(`
+    SELECT
+      team_id
+    FROM 
+      team_user
+    WHERE
+      user_id=$1::integer
+    `, [user_id])
 
     return result?.rows
   }
@@ -39,7 +52,8 @@ class TeamRoleService {
       FROM team_user
       WHERE
         user_id=$1::integer
-      AND team_id=$2::integer
+      AND 
+        team_id=$2::integer
     `, [user_id, team_id])
 
     return result?.rowCount ? true : false
@@ -65,4 +79,4 @@ class TeamRoleService {
   };
 }
 
-export default TeamRoleService;
+export default TeamUserService;

@@ -11,81 +11,76 @@ type RoleRequest = Request<{ role_id?: number }, any, {
   role_name: string;
 }>
 
-const getAllRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role[]>) => {
-  const result = await RoleService.GET_ALL()
+class RoleController {
+  static GET = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role[]>) => {
+    const result = await RoleService.GET_ALL()
 
-  res.status(StatusCodes.OK).json({
-    status: StatusCodes.OK,
-    success: true,
-    data: result
+    res.status(StatusCodes.OK).json({
+      status: StatusCodes.OK,
+      success: true,
+      data: result
+    })
   })
-})
 
-const getRoleById = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role>) => {
-  const role_id = Number(req.params.role_id);
+  static SHOW = asyncHandler(async (req: RoleRequest, res: RoleResponse<Role>) => {
+    const role_id = Number(req.params.role_id);
 
-  if (!role_id) {
-    const response: ErrorResponse = {
-      status: StatusCodes.BAD_REQUEST,
-      message: "Role ID not specified"
+    if (!role_id) {
+      const response: ErrorResponse = {
+        status: StatusCodes.BAD_REQUEST,
+        message: "Role ID not specified"
+      }
+
+      return res.status(StatusCodes.BAD_REQUEST).json(response)
     }
 
-    return res.status(StatusCodes.BAD_REQUEST).json(response)
-  }
+    const result = await RoleService.GET_BY_ID(role_id)
 
-  const result = await RoleService.GET_BY_ID(role_id)
-
-  res.status(StatusCodes.OK).json({
-    status: StatusCodes.OK,
-    success: true,
-    data: result
+    res.status(StatusCodes.OK).json({
+      status: StatusCodes.OK,
+      success: true,
+      data: result
+    })
   })
-})
 
-const createNewRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<any>) => {
-  const result = RoleService.STORE(req.body)
+  static POST = asyncHandler(async (req: RoleRequest, res: RoleResponse<any>) => {
+    const result = RoleService.STORE(req.body)
 
-  res.status(StatusCodes.CREATED).json({
-    status: StatusCodes.CREATED,
-    success: true,
-    message: `New role successfully created`,
-    data: result
+    res.status(StatusCodes.CREATED).json({
+      status: StatusCodes.CREATED,
+      success: true,
+      message: `New role successfully created`,
+      data: result
+    })
   })
-})
 
-const updateRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<any>) => {
-  const role_id = Number(req.params.role_id);
+  static UPDATE = asyncHandler(async (req: RoleRequest, res: RoleResponse<any>) => {
+    const role_id = Number(req.params.role_id);
 
-  const result = RoleService.UPDATE(
-    role_id,
-    req.body
-  )
+    const result = RoleService.UPDATE(
+      role_id,
+      req.body
+    )
 
-  res.status(StatusCodes.OK).json({
-    status: StatusCodes.OK,
-    success: true,
-    message: `Role with ID ${role_id} has been updated`,
-    data: result
+    res.status(StatusCodes.OK).json({
+      status: StatusCodes.OK,
+      success: true,
+      message: `Role with ID ${role_id} has been updated`,
+      data: result
+    })
   })
-})
 
-const deleteRole = asyncHandler(async (req: RoleRequest, res: RoleResponse<null>) => {
-  const role_id = Number(req.params.role_id);
+  static DELETE = asyncHandler(async (req: RoleRequest, res: RoleResponse<null>) => {
+    const role_id = Number(req.params.role_id);
 
-  RoleService.DELETE(role_id)
+    RoleService.DELETE(role_id)
 
-  res.status(StatusCodes.OK).json({
-    status: StatusCodes.OK,
-    success: true,
-    message: `Role with ID ${role_id} has been deleted`,
+    res.status(StatusCodes.OK).json({
+      status: StatusCodes.OK,
+      success: true,
+      message: `Role with ID ${role_id} has been deleted`,
+    })
   })
-})
-
-
-export {
-  getAllRole,
-  getRoleById,
-  createNewRole,
-  updateRole,
-  deleteRole
 }
+
+export default RoleController
