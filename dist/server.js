@@ -805,7 +805,23 @@ _TeamService.GET_BY_ID = (team_id) => __async(_TeamService, null, function* () {
     `, [team_id]);
   return result == null ? void 0 : result.rows.at(0);
 });
-_TeamService.GET_TEAM_MEMBER = (team_id) => __async(_TeamService, null, function* () {
+_TeamService.DELETE_TEAM = (team_id) => __async(_TeamService, null, function* () {
+  yield query(`
+      DELETE FROM teams
+      WHERE id=$1::integer
+    `, [team_id]);
+  yield query(`
+      DELETE FROM team_user
+      WHERE team_id=$1::integer
+    `, [team_id]);
+});
+var TeamService = _TeamService;
+var team_service_default = TeamService;
+
+// src/services/team-role-service.ts
+var _TeamRoleService = class _TeamRoleService {
+};
+_TeamRoleService.GET_TEAM_MEMBER = (team_id) => __async(_TeamRoleService, null, function* () {
   const result = yield query(`
       SELECT
         u.email,
@@ -821,7 +837,7 @@ _TeamService.GET_TEAM_MEMBER = (team_id) => __async(_TeamService, null, function
     `, [team_id]);
   return result == null ? void 0 : result.rows;
 });
-_TeamService.ADD_MEMBER = (user_id, team_id) => __async(_TeamService, null, function* () {
+_TeamRoleService.ADD_MEMBER = (user_id, team_id) => __async(_TeamRoleService, null, function* () {
   const result = yield query(`
       INSERT INTO team_user (
         user_id,
@@ -831,14 +847,7 @@ _TeamService.ADD_MEMBER = (user_id, team_id) => __async(_TeamService, null, func
     `, [user_id, team_id]);
   return result == null ? void 0 : result.rows.at(0);
 });
-_TeamService.REMOVE_MEMBER = (user_id, team_id) => __async(_TeamService, null, function* () {
-  yield query(`
-      DELETE FROM team_user
-      WHERE user_id=$1::integer
-      AND team_id=$2::integer
-    `, [user_id, team_id]);
-});
-_TeamService.CHECK_MEMBER_EXISTANCE = (user_id, team_id) => __async(_TeamService, null, function* () {
+_TeamRoleService.CHECK_MEMBER_EXISTANCE = (user_id, team_id) => __async(_TeamRoleService, null, function* () {
   const result = yield query(`
       SELECT
         *
@@ -849,17 +858,14 @@ _TeamService.CHECK_MEMBER_EXISTANCE = (user_id, team_id) => __async(_TeamService
     `, [user_id, team_id]);
   return (result == null ? void 0 : result.rowCount) ? true : false;
 });
-_TeamService.DELETE_TEAM = (team_id) => __async(_TeamService, null, function* () {
-  yield query(`
-      DELETE FROM teams
-      WHERE id=$1::integer
-    `, [team_id]);
+_TeamRoleService.REMOVE_MEMBER = (user_id, team_id) => __async(_TeamRoleService, null, function* () {
   yield query(`
       DELETE FROM team_user
-      WHERE team_id=$1::integer
-    `, [team_id]);
+      WHERE user_id=$1::integer
+      AND team_id=$2::integer
+    `, [user_id, team_id]);
 });
-_TeamService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamService, null, function* () {
+_TeamRoleService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamRoleService, null, function* () {
   const result = yield query(`
     SELECT 1 FROM team_user tu
     JOIN public."users" u ON tu.user_id = u.id
@@ -868,8 +874,63 @@ _TeamService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamService, null, fun
   `, [team_id]);
   return (result == null ? void 0 : result.rowCount) ? true : false;
 });
-var TeamService = _TeamService;
-var team_service_default = TeamService;
+var TeamRoleService = _TeamRoleService;
+var team_role_service_default = TeamRoleService;
+
+// src/services/team-project-service.ts
+var _TeamProjectService = class _TeamProjectService {
+};
+_TeamProjectService.ASSIGN_PROJECT = (project_id, team_id) => __async(_TeamProjectService, null, function* () {
+  const result = yield query(`
+    INSERT INTO team_project (
+      team_id,
+      project_id
+    ) VALUES (
+      $1::integer, 
+      $2::integer
+    )
+    RETURNING *
+    `, [team_id, project_id]);
+  return result == null ? void 0 : result.rows.at(0);
+});
+_TeamProjectService.GET_BY_ID = (project_id, team_id) => __async(_TeamProjectService, null, function* () {
+  const result = yield query(`
+    SELECT * FROM 
+      team_project 
+    WHERE
+      team_id=$1::integer
+    AND
+      project_id=$2::integer
+    `, [team_id, project_id]);
+  return result == null ? void 0 : result.rows.at(0);
+});
+_TeamProjectService.GET_BY_TEAM_ID = (team_id) => __async(_TeamProjectService, null, function* () {
+  const result = yield query(`
+    SELECT 
+      p.*
+    FROM 
+      team_project tp
+    JOIN
+      project p
+    ON 
+      tp.project_id=p.id
+    WHERE
+      tp.project_id=$1::integer
+    `, [team_id]);
+  return result == null ? void 0 : result.rows;
+});
+_TeamProjectService.REMOVE_PROJECT = (project_id, team_id) => __async(_TeamProjectService, null, function* () {
+  const result = yield query(`
+    DELETE FROM
+      team_project
+    WHERE
+      project_id=$1::integer
+    AND
+      team_id=$2::integer
+    `, [project_id, team_id]);
+});
+var TeamProjectService = _TeamProjectService;
+var team_project_service_default = TeamProjectService;
 
 // src/controller/team-controller.ts
 var _TeamController = class _TeamController {
@@ -886,7 +947,7 @@ _TeamController.INDEX = asyncHandler((req, res) => __async(_TeamController, null
 _TeamController.SHOW = asyncHandler((req, res) => __async(_TeamController, null, function* () {
   const team_id = Number(req.body.team_id);
   const teamDetailsResult = yield team_service_default.GET_BY_ID(team_id);
-  const memberResult = yield team_service_default.GET_TEAM_MEMBER(team_id);
+  const memberResult = yield team_role_service_default.GET_TEAM_MEMBER(team_id);
   res.status(200).json({
     status: 200,
     success: true,
@@ -915,7 +976,7 @@ _TeamController.ADD_MEMBER = asyncHandler((req, res) => __async(_TeamController,
       message: validation.message
     });
   }
-  const result = yield team_service_default.ADD_MEMBER(
+  const result = yield team_role_service_default.ADD_MEMBER(
     user_id,
     team_id
   );
@@ -929,7 +990,7 @@ _TeamController.ADD_MEMBER = asyncHandler((req, res) => __async(_TeamController,
 _TeamController.REMOVE_MEMBER = asyncHandler((req, res) => __async(_TeamController, null, function* () {
   const user_id = Number(req.body.user_id);
   const team_id = Number(req.body.team_id);
-  const result = yield team_service_default.REMOVE_MEMBER(user_id, team_id);
+  const result = yield team_role_service_default.REMOVE_MEMBER(user_id, team_id);
   res.status(200).json({
     status: 200,
     success: true,
@@ -946,11 +1007,52 @@ _TeamController.DESTROY = asyncHandler((req, res) => __async(_TeamController, nu
     message: `Team has been successfully deleted`
   });
 }));
+_TeamController.ASSIGN_PROJECT = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const team_id = Number(req.body.team_id);
+  const project_id = Number(req.body.project_id);
+  const { valid, message: validationMessage } = yield Validation.validateProjectOwnership(project_id, team_id);
+  if (!valid) {
+    return res.status(401).json({
+      status: 403,
+      message: validationMessage
+    });
+  }
+  const result = yield team_project_service_default.ASSIGN_PROJECT(project_id, team_id);
+  return res.status(201).json({
+    status: 201,
+    success: true,
+    message: `Project has been assigned to the team soccessfully!`,
+    data: result
+  });
+}));
+_TeamController.REMOVE_PROJECT_FROM_TEAM = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const team_id = Number(req.body.team_id);
+  const project_id = Number(req.body.project_id);
+  yield team_project_service_default.REMOVE_PROJECT(project_id, team_id);
+  return res.status(200).json({
+    status: 200,
+    success: true,
+    message: `Project has been removed from the team`
+  });
+}));
 var TeamController = _TeamController;
 var _Validation = class _Validation {
 };
+_Validation.validateProjectOwnership = (project_id, team_id) => __async(_Validation, null, function* () {
+  const isAssigned = yield team_project_service_default.GET_BY_ID(project_id, team_id);
+  if (isAssigned) {
+    return {
+      valid: false,
+      message: "The Project with the same ID, already assigned to the team."
+    };
+  }
+  return {
+    valid: true,
+    message: ""
+  };
+});
 _Validation.validateMembership = (user_id, team_id) => __async(_Validation, null, function* () {
-  const isMember = yield team_service_default.CHECK_MEMBER_EXISTANCE(user_id, team_id);
+  const isMember = yield team_role_service_default.CHECK_MEMBER_EXISTANCE(user_id, team_id);
   if (isMember) {
     return {
       valid: false,
@@ -965,7 +1067,7 @@ _Validation.validateMembership = (user_id, team_id) => __async(_Validation, null
     };
   }
   if ((user == null ? void 0 : user.level) === "lead") {
-    const hasLead = yield team_service_default.CHECK_LEAD_EXISTENCE(team_id);
+    const hasLead = yield team_role_service_default.CHECK_LEAD_EXISTENCE(team_id);
     if (hasLead) {
       return {
         valid: false,
@@ -989,6 +1091,8 @@ route2.get("/show", team_controller_default.SHOW);
 route2.post("/add-member", team_controller_default.ADD_MEMBER);
 route2.delete("/remove-member", team_controller_default.REMOVE_MEMBER);
 route2.delete("/delete", team_controller_default.DESTROY);
+route2.post("/assign-project", team_controller_default.ASSIGN_PROJECT);
+route2.delete("/remove-project", team_controller_default.REMOVE_PROJECT_FROM_TEAM);
 var team_route_default = route2;
 
 // src/route/task-route.ts
@@ -1350,7 +1454,6 @@ var calculateWorkingHours = (start, end) => {
 // src/route/chart-route.ts
 var route5 = import_express5.default.Router();
 route5.get("/:model", getChartData);
-var chart_route_default = route5;
 
 // src/route/auth-route.ts
 var import_express6 = __toESM(require("express"));
@@ -1921,6 +2024,27 @@ route9.put("/:role_id", updateRole);
 route9.delete("/:role_id", deleteRole);
 var role_route_default = route9;
 
+// src/middleware/level-middleware.ts
+var verifyRole = (allowedLevels) => {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user) {
+      return res.json({
+        status: 400,
+        message: `No user logged in yet.`
+      });
+    }
+    const allowed = allowedLevels.includes(user.level);
+    if (!allowed) {
+      return res.json({
+        status: 403,
+        message: `This route is protected`
+      });
+    }
+    next();
+  };
+};
+
 // src/server.ts
 require("dotenv").config();
 var asyncHandler2 = () => __async(exports, null, function* () {
@@ -1934,9 +2058,8 @@ var asyncHandler2 = () => __async(exports, null, function* () {
   app.use(import_express10.default.urlencoded({ extended: true }));
   app.use(import_express10.default.static("public"));
   app.use("/api/auth/", auth_route_default);
-  app.use("/api/employees/", employee_route_default);
+  app.use("/api/employees/", verifyToken, verifyRole(["hr"]), employee_route_default);
   app.use("/api/tasks/", verifyToken, task_route_default);
-  app.use("/api/charts/", verifyToken, chart_route_default);
   app.use("/api/profiles/", verifyToken, profile_route_default);
   app.use("/api/absences/", verifyToken, absence_route_default);
   app.use("/api/projects/", project_route_default);

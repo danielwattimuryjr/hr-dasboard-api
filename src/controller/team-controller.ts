@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../helper/async-helper";
 import TeamService from "../services/team-service";
-import { Employee, ErrorResponse, SuccessResponse, Team, TeamUser } from "../types";
+import { Employee, ErrorResponse, SuccessResponse, Team, TeamProject, TeamUser } from "../types";
 import EmployeeService from "../services/employee-service";
+import TeamRoleService from "../services/team-role-service";
+import TeamProjectService from "../services/team-project-service";
 
 type TeamResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
 
@@ -20,7 +22,7 @@ class TeamController {
   static SHOW = asyncHandler(async (req: Request, res: Response) => {
     const team_id = Number(req.body.team_id);
     const teamDetailsResult = await TeamService.GET_BY_ID(team_id);
-    const memberResult = await TeamService.GET_TEAM_MEMBER(team_id);
+    const memberResult = await TeamRoleService.GET_TEAM_MEMBER(team_id);
 
     res.status(200).json({
       status: 200,
@@ -55,7 +57,7 @@ class TeamController {
       } as ErrorResponse);
     }
 
-    const result = await TeamService.ADD_MEMBER(
+    const result = await TeamRoleService.ADD_MEMBER(
       user_id,
       team_id
     )
@@ -72,7 +74,7 @@ class TeamController {
     const user_id = Number(req.body.user_id)
     const team_id = Number(req.body.team_id)
 
-    const result = await TeamService.REMOVE_MEMBER(user_id, team_id)
+    const result = await TeamRoleService.REMOVE_MEMBER(user_id, team_id)
 
     res.status(200).json({
       status: 200,
@@ -93,12 +95,66 @@ class TeamController {
       message: `Team has been successfully deleted`,
     })
   })
+
+  static ASSIGN_PROJECT = asyncHandler(async (req: Request, res: Response) => {
+    const team_id = Number(req.body.team_id);
+    const project_id = Number(req.body.project_id);
+
+    const { valid, message: validationMessage } = await Validation.validateProjectOwnership(project_id, team_id);
+    if (!valid) {
+      return res.status(401).json({
+        status: 403,
+        message: validationMessage
+      } as ErrorResponse)
+    }
+
+    const result = await TeamProjectService.ASSIGN_PROJECT(project_id, team_id)
+
+    return res.status(201).json({
+      status: 201,
+      success: true,
+      message: `Project has been assigned to the team soccessfully!`,
+      data: result
+    } as SuccessResponse<TeamProject>)
+  })
+
+  static REMOVE_PROJECT_FROM_TEAM = asyncHandler(async (req: Request, res: Response) => {
+    const team_id = Number(req.body.team_id);
+    const project_id = Number(req.body.project_id);
+
+    await TeamProjectService.REMOVE_PROJECT(project_id, team_id)
+
+    return res.status(200).json({
+      status: 200,
+      success: true,
+      message: `Project has been removed from the team`
+    } as SuccessResponse<undefined>)
+  })
 }
 
 class Validation {
+  static readonly validateProjectOwnership = async (project_id: number, team_id: number): Promise<{
+    valid: boolean,
+    message: string;
+  }> => {
+    const isAssigned = await TeamProjectService.GET_BY_ID(project_id, team_id)
+
+    if (isAssigned) {
+      return {
+        valid: false,
+        message: "The Project with the same ID, already assigned to the team."
+      }
+    }
+
+    return {
+      valid: true,
+      message: ""
+    }
+  }
+
   static readonly validateMembership = async (user_id: number, team_id: number) => {
     // Check if the user is already a member of the team
-    const isMember = await TeamService.CHECK_MEMBER_EXISTANCE(user_id, team_id);
+    const isMember = await TeamRoleService.CHECK_MEMBER_EXISTANCE(user_id, team_id);
     if (isMember) {
       return {
         valid: false,
@@ -119,7 +175,7 @@ class Validation {
 
     // Prevent adding more than one "lead" to a team
     if (user?.level === "lead") {
-      const hasLead = await TeamService.CHECK_LEAD_EXISTENCE(team_id);
+      const hasLead = await TeamRoleService.CHECK_LEAD_EXISTENCE(team_id);
       if (hasLead) {
         return {
           valid: false,

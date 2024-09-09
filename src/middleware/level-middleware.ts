@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { ErrorResponse } from "../types";
+import { EmployeeLevel, ErrorResponse } from "../types";
 
-export const verifyRole = (role: string) => {
+export const verifyRole = (allowedLevels: EmployeeLevel[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = req.user
 
@@ -12,7 +12,10 @@ export const verifyRole = (role: string) => {
       } as ErrorResponse)
     }
 
-    if (!(user.role == role)) {
+    // Check if the user's role is in the allowedLevels array
+    const allowed = allowedLevels.includes(user.level);
+
+    if (!allowed) {
       return res.json({
         status: 403,
         message: `This route is protected`

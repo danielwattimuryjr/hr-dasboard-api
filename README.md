@@ -535,6 +535,76 @@
 
 </details>
 
+<details>
+ <summary><code>POST</code> <code><b>192.168.18.30:3000/api/teams/assign-project</b></code> <code>(Assign a project to a team)</code></summary>
+
+##### Request
+
+```json
+{
+  "team_id": 2,
+  "project_id": 1
+}
+```
+
+##### Response
+
+```json
+{
+  "status": 201,
+  "success": true,
+  "message": "Project has been assigned to the team soccessfully!",
+  "data": {
+    "team_id": 2,
+    "project_id": 1
+  }
+}
+```
+
+</details>
+
+<details>
+ <summary><code>DELETE</code> <code><b>192.168.18.30:3000/api/teams/remove-project</b></code> <code>(Delete Project from a team)</code></summary>
+
+##### Request
+
+```json
+{
+  "team_id": 2,
+  "project_id": 1
+}
+```
+
+##### Response
+
+````json
+<details>
+ <summary><code>POST</code> <code><b>192.168.18.30:3000/api/teams/assign-project</b></code> <code>(Delete a team)</code></summary>
+
+##### Request
+
+```json
+{
+  "team_id": 2,
+  "project_id": 1
+}
+````
+
+##### Response
+
+```json
+{
+  "status": 200,
+  "success": true,
+  "message": "Project has been removed from the team"
+}
+```
+
+</details>
+```
+
+</details>
+
 #### Absence
 
 <details>

@@ -21,6 +21,7 @@ import {
   taskRouter,
   teamRoute
 } from './route';
+import { verifyRole } from './middleware/level-middleware';
 
 const asyncHandler = async () => {
   await db.connect()
@@ -37,9 +38,8 @@ const asyncHandler = async () => {
   app.use(express.static('public'));
 
   app.use('/api/auth/', authRouter)
-  app.use('/api/employees/', employeeRouter)
+  app.use('/api/employees/', verifyToken, verifyRole(['hr']), employeeRouter)
   app.use('/api/tasks/', verifyToken, taskRouter)
-  app.use('/api/charts/', verifyToken, chartRouter)
   app.use('/api/profiles/', verifyToken, profileRoute)
   app.use('/api/absences/', verifyToken, absenceRoute)
   app.use('/api/projects/', projectRoute)
