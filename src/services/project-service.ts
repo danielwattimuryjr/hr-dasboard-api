@@ -1,5 +1,5 @@
 import { query } from "../libs/pg"
-import { Project } from "../types"
+import { Project, TeamProject } from "../types"
 
 class ProjectService {
   static GET_ALL = async (): Promise<Project[]> => {
@@ -13,7 +13,7 @@ class ProjectService {
     return fetchProjectResult?.rows || []
   }
 
-  static GET_BY_ID = async (project_id: number): Promise<Project | undefined> => {
+  static GET_BY_ID = async (project_id: number) => {
     const fetchProjectByIdResult = await query<Project>(`
     SELECT 
       *
@@ -21,7 +21,7 @@ class ProjectService {
     WHERE id=$1::integer
     `, [project_id])
 
-    return fetchProjectByIdResult?.rows.at(0)
+    return fetchProjectByIdResult
   }
 
   static STORE = async (project: Project): Promise<Project | undefined> => {

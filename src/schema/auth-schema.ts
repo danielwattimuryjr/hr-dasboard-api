@@ -17,11 +17,9 @@ export const userRegistrationSchema = z.object({
 })
 
 export const loginSchema = z.object({
-  email: z.string()
-    .min(1, { message: "Email is required" })
+  email: z.string({ message: 'The Email field is required' })
     .max(100, { message: "Email must not exceed 100 characters" })
     .email({ message: "Invalid email format" }),
-  password: z.string()
-    .min(1, { message: "Password is required" })
+  password: z.string({ message: 'The Password field is required' })
     .max(100, { message: "Password must not exceed 100 characters" }),
 })

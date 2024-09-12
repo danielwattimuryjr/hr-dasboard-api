@@ -3,7 +3,7 @@ import { asyncHandler } from "../helper/async-helper";
 import TeamService from "../services/team-service";
 import { Employee, ErrorResponse, SuccessResponse, Team, TeamProject, TeamUser } from "../types";
 import EmployeeService from "../services/employee-service";
-import TeamUserService from "../services/team-role-service";
+import TeamUserService from "../services/team-user-service";
 import TeamProjectService from "../services/team-project-service";
 
 type TeamResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
@@ -20,7 +20,7 @@ class TeamController {
 
   // SHOW
   static SHOW = asyncHandler(async (req: Request, res: Response) => {
-    const team_id = Number(req.body.team_id);
+    const team_id = Number(req.params.team_id);
     const teamDetailsResult = await TeamService.GET_BY_ID(team_id);
     const memberResult = await TeamUserService.GET_TEAM_MEMBER(team_id);
 
@@ -35,6 +35,14 @@ class TeamController {
   });
 
   static CREATE_TEAM = asyncHandler(async (req: Request, res: TeamResponse<Team>) => {
+    const isValid = await Validation.isValid(req.body)
+    if (!isValid.valid) {
+      return res.status(403).json({
+        status: 403,
+        message: isValid.message
+      } as ErrorResponse)
+    }
+
     const result = await TeamService.CREATE_TEAM(req.body)
 
     res.status(201).json({
@@ -85,7 +93,7 @@ class TeamController {
   })
 
   static DESTROY = asyncHandler(async (req: Request, res: Response) => {
-    const team_id = Number(req.body.team_id)
+    const team_id = Number(req.params.team_id)
 
     await TeamService.DELETE_TEAM(team_id)
 
@@ -133,6 +141,25 @@ class TeamController {
 }
 
 class Validation {
+  static isValid = async (team: Team, isUpdate: boolean = false): Promise<{
+    valid: boolean,
+    message?: string
+  }> => {
+    const isDuplicated = await TeamService.CHECK_DUPLICATE_ENTRY(team)
+    isUpdate ? team.id : undefined
+
+    if (isDuplicated) {
+      return {
+        valid: false,
+        message: `Team with the name ${team.name} is already exist`
+      }
+    }
+
+    return {
+      valid: true
+    }
+  }
+
   static readonly validateProjectOwnership = async (project_id: number, team_id: number): Promise<{
     valid: boolean,
     message: string;
@@ -154,7 +181,7 @@ class Validation {
 
   static readonly validateMembership = async (user_id: number, team_id: number) => {
     // Check if the user is already a member of the team
-    const isMember = await TeamUserService.CHECK_MEMBER_EXISTANCE(user_id, team_id);
+    const isMember = await TeamUserService.CHECK_MEMBER_EXISTANCE(user_id);
     if (isMember) {
       return {
         valid: false,

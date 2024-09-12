@@ -23,7 +23,7 @@ export const login = asyncHandler(async (req: LoginRequest, res: LoginResponse<a
 
   const user = result?.rows.at(0);
 
-  const token = jwt.sign({ user }, 'test', { expiresIn: '1h' })
+  const token = jwt.sign({ user }, 'test', { expiresIn: '1d' })
 
   res
     // .cookie("access_token", `${token}`, {

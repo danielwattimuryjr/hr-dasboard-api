@@ -1,5 +1,5 @@
 import { query } from "../libs/pg";
-import { Employee } from "../types";
+import { Employee, KeysOfType } from "../types";
 
 class EmployeeService {
   static GET_ALL = async (
@@ -37,12 +37,16 @@ class EmployeeService {
       SELECT 
         u.id, 
         u.email, 
-        u.full_name AS name, 
+        u.name, 
         u.phone, 
+        u.role_id,
         r.display_name AS role,
+        u.team_id,
+        t.name AS team,
         u.level
       FROM users u 
       LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN teams t ON u.team_id = t.id
       ${whereClause}
       ORDER BY u.id ASC
       ${limitQuery}
@@ -73,25 +77,30 @@ class EmployeeService {
     }
   }
 
-  static GET_BY_ID = async (employeeId: number): Promise<Employee | undefined> => {
+  static GET_BY_ID = async (employeeId: number) => {
     const fethUserInfoByIdResult = await query<Employee>(`
     SELECT
       u.id, 
       u.email, 
-      u.full_name AS name, 
+      u.name, 
       u.phone,
+      u.level,
       u.role_id,
       r.display_name AS role,
-      u.level
+      u.team_id,
+      t.name AS team
     FROM public."users" u
-    LEFT JOIN roles r ON u.role_id = r.id
+    JOIN roles r ON u.role_id = r.id
+    JOIN teams t ON u.team_id = t.id
     WHERE u.id = $1::integer
     `, [employeeId])
 
-    return fethUserInfoByIdResult?.rows.at(0)
+    return fethUserInfoByIdResult
   }
 
   static DELETE = async (employeeId: number): Promise<void> => {
+    console.log(employeeId);
+
     await query(`
       DELETE FROM public."users" 
       WHERE id=$1::integer
@@ -99,40 +108,39 @@ class EmployeeService {
   }
 
   static STORE = async (employee: Employee): Promise<Employee | undefined> => {
-    const { email, full_name, username, password, phone, role_id, level } = employee
+    const { email, name, password, phone, role_id, team_id, level } = employee
 
     const storeEmployeeResult = await query<Employee>(`
     INSERT INTO public."users" (
       email,
-      full_name,
-      username,
       password,
+      name,
       role_id,
       phone,
-      level
-    ) VALUES ($1, $2, $3, $4, $5::integer, $6, $7) 
+      level,
+      team_id
+    ) VALUES ($1, $2, $3, $4::integer, $5, $6, $7::integer) 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, level])
+    `, [email, password, name, role_id, phone, level, team_id])
 
     return storeEmployeeResult?.rows.at(0)
   }
 
   static UPDATE = async (employee: Employee): Promise<Employee | undefined> => {
-    const { email, full_name, username, password, phone, role_id, level, id } = employee
+    const { email, name, phone, level, role_id, team_id, id } = employee
 
     const updateEmployeeResult = await query<Employee>(`
     UPDATE public."users"
     SET 
       email=$1, 
-      full_name=$2, 
-      username=$3, 
-      password=$4, 
+      name=$2, 
+      phone=$3,
+      level=$4,
       role_id=$5::integer,
-      phone=$6,
-      level=$7
-    WHERE id=$8::integer 
+      team_id=$6::integer
+    WHERE id=$7::integer 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, level, id])
+    `, [email, name, phone, level, role_id, team_id, id])
 
     return updateEmployeeResult?.rows.at(0)
   }
@@ -144,7 +152,6 @@ class EmployeeService {
 
     return result?.rows.at(0);
   };
-
 }
 
 export default EmployeeService

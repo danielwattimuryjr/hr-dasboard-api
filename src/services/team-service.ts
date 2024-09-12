@@ -46,6 +46,24 @@ class TeamService {
       WHERE team_id=$1::integer
     `, [team_id])
   }
+
+  static CHECK_DUPLICATE_ENTRY = async (team: Team, excludeId?: number) => {
+    const queryStr = `
+    SELECT id
+    FROM teams
+    WHERE (name = $1)
+    ${excludeId !== undefined ? 'AND id != $2' : ''}
+    LIMIT 1
+  `;
+
+    const params = excludeId !== undefined
+      ? [team.name, excludeId]
+      : [team.name];
+
+    const result = await query<{ id: number }>(queryStr, params);
+
+    return result.rowCount > 0;
+  }
 }
 
 export default TeamService

@@ -33,17 +33,17 @@ class TeamProjectService {
   }
 
   static GET_BY_TEAM_ID = async (team_id: number) => {
-    const result = await query<Project[]>(`
+    const result = await query<Project>(`
     SELECT 
       p.*
     FROM 
       team_project tp
     JOIN
-      project p
+      projects p
     ON 
       tp.project_id=p.id
     WHERE
-      tp.project_id=$1::integer
+      tp.team_id=$1::integer
     `, [team_id])
 
     return result?.rows
@@ -58,6 +58,20 @@ class TeamProjectService {
     AND
       team_id=$2::integer
     `, [project_id, team_id])
+  }
+
+  static CHECK_TEAM_PERMISSION = async (teamId: number, projectId: number) => {
+    const result = await query<TeamProject>(`
+    SELECT
+      *
+    FROM team_project
+    WHERE
+      team_id=$1::integer
+    AND
+      project_id=$2::integer
+    `, [teamId, projectId])
+
+    return result?.rowCount > 0
   }
 }
 

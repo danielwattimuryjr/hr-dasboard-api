@@ -3,6 +3,7 @@ import { asyncHandler } from "../helper/async-helper";
 import { StatusCodes } from "http-status-codes";
 import { Employee, ErrorResponse, SuccessResponse } from "../types";
 import EmployeeService from "../services/employee-service";
+import TeamUserService from "../services/team-user-service";
 
 
 type EmployeeResponse<TData> = Response<SuccessResponse<TData> | ErrorResponse>
@@ -44,20 +45,31 @@ export const getAllEmployees = asyncHandler(async (req: EmployeeRequest, res: Em
 // @desc  Get user by id
 // @route GET /api/employees:user_id
 export const getEmployeeById = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
-  const result = await EmployeeService.GET_BY_ID(req.params.user_id)
+  const employeeId = Number(req.params.user_id)
+  const result = await EmployeeService.GET_BY_ID(employeeId)
+
+  const resultCount = result?.rowCount ?? 0
+
+  if (!(resultCount > 0)) {
+    return res.status(404).json({
+      status: 404,
+      message: `Employee not found`
+    } as ErrorResponse)
+  }
 
   res.status(StatusCodes.OK).json({
     status: StatusCodes.OK,
     success: true,
-    data: result
+    data: result?.rows.at(0)
   });
 });
 
 // @desc  Delete a user
 // @route DELETE /api/employees:user_id
 export const deleteEmployee = asyncHandler(async (req: Request, res: EmployeeResponse<null>) => {
+  const user_id = Number(req.params.user_id)
   await EmployeeService.DELETE(
-    Number(req.params.user_id)
+    user_id
   )
 
   res.status(StatusCodes.OK).json({
@@ -70,7 +82,9 @@ export const deleteEmployee = asyncHandler(async (req: Request, res: EmployeeRes
 // @desc Create a user
 // @route POST /api/employees
 export const createEmployee = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
+  const team_id = Number(req.body.team_id)
   const result = await EmployeeService.STORE(req.body)
+  await TeamUserService.ADD_MEMBER(result?.id, team_id)
 
   res.status(StatusCodes.OK).json({
     status: StatusCodes.CREATED,

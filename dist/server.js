@@ -416,7 +416,7 @@ var require_lib = __commonJS({
 
 // src/server.ts
 var import_config = require("dotenv/config");
-var import_express10 = __toESM(require("express"));
+var import_express11 = __toESM(require("express"));
 var import_cors = __toESM(require_lib());
 var import_helmet = __toESM(require("helmet"));
 
@@ -527,6 +527,30 @@ var verifyToken = (req, res, next) => __async(void 0, null, function* () {
 // src/server.ts
 var import_cookie_parser = __toESM(require("cookie-parser"));
 
+// src/routes.ts
+var import_express10 = require("express");
+
+// src/middleware/level-middleware.ts
+var verifyRole = (allowedLevels) => {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user) {
+      return res.json({
+        status: 400,
+        message: `No user logged in yet.`
+      });
+    }
+    const allowed = allowedLevels.includes(user.level);
+    if (!allowed) {
+      return res.json({
+        status: 403,
+        message: `This route is protected`
+      });
+    }
+    next();
+  };
+};
+
 // src/route/employee-route.ts
 var import_express = __toESM(require("express"));
 
@@ -562,12 +586,16 @@ _EmployeeService.GET_ALL = (limit, currentPage, searchStr) => __async(_EmployeeS
       SELECT 
         u.id, 
         u.email, 
-        u.full_name AS name, 
+        u.name, 
         u.phone, 
+        u.role_id,
         r.display_name AS role,
+        u.team_id,
+        t.name AS team,
         u.level
       FROM users u 
       LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN teams t ON u.team_id = t.id
       ${whereClause}
       ORDER BY u.id ASC
       ${limitQuery}
@@ -598,54 +626,57 @@ _EmployeeService.GET_BY_ID = (employeeId) => __async(_EmployeeService, null, fun
     SELECT
       u.id, 
       u.email, 
-      u.full_name AS name, 
+      u.name, 
       u.phone,
+      u.level,
       u.role_id,
       r.display_name AS role,
-      u.level
+      u.team_id,
+      t.name AS team
     FROM public."users" u
-    LEFT JOIN roles r ON u.role_id = r.id
+    JOIN roles r ON u.role_id = r.id
+    JOIN teams t ON u.team_id = t.id
     WHERE u.id = $1::integer
     `, [employeeId]);
-  return fethUserInfoByIdResult == null ? void 0 : fethUserInfoByIdResult.rows.at(0);
+  return fethUserInfoByIdResult;
 });
 _EmployeeService.DELETE = (employeeId) => __async(_EmployeeService, null, function* () {
+  console.log(employeeId);
   yield query(`
       DELETE FROM public."users" 
       WHERE id=$1::integer
     `, [employeeId]);
 });
 _EmployeeService.STORE = (employee) => __async(_EmployeeService, null, function* () {
-  const { email, full_name, username, password, phone, role_id, level } = employee;
+  const { email, name, password, phone, role_id, team_id, level } = employee;
   const storeEmployeeResult = yield query(`
     INSERT INTO public."users" (
       email,
-      full_name,
-      username,
       password,
+      name,
       role_id,
       phone,
-      level
-    ) VALUES ($1, $2, $3, $4, $5::integer, $6, $7) 
+      level,
+      team_id
+    ) VALUES ($1, $2, $3, $4::integer, $5, $6, $7::integer) 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, level]);
+    `, [email, password, name, role_id, phone, level, team_id]);
   return storeEmployeeResult == null ? void 0 : storeEmployeeResult.rows.at(0);
 });
 _EmployeeService.UPDATE = (employee) => __async(_EmployeeService, null, function* () {
-  const { email, full_name, username, password, phone, role_id, level, id } = employee;
+  const { email, name, phone, level, role_id, team_id, id } = employee;
   const updateEmployeeResult = yield query(`
     UPDATE public."users"
     SET 
       email=$1, 
-      full_name=$2, 
-      username=$3, 
-      password=$4, 
+      name=$2, 
+      phone=$3,
+      level=$4,
       role_id=$5::integer,
-      phone=$6,
-      level=$7
-    WHERE id=$8::integer 
+      team_id=$6::integer
+    WHERE id=$7::integer 
     RETURNING *
-    `, [email, full_name, username, password, role_id, phone, level, id]);
+    `, [email, name, phone, level, role_id, team_id, id]);
   return updateEmployeeResult == null ? void 0 : updateEmployeeResult.rows.at(0);
 });
 _EmployeeService.GET_EMPLOYEE_LEVEL = (user_id) => __async(_EmployeeService, null, function* () {
@@ -656,6 +687,75 @@ _EmployeeService.GET_EMPLOYEE_LEVEL = (user_id) => __async(_EmployeeService, nul
 });
 var EmployeeService = _EmployeeService;
 var employee_service_default = EmployeeService;
+
+// src/services/team-user-service.ts
+var _TeamUserService = class _TeamUserService {
+};
+_TeamUserService.GET_TEAM_MEMBER = (team_id) => __async(_TeamUserService, null, function* () {
+  const result = yield query(`
+      SELECT
+        u.email,
+        u.name,
+        u.phone,
+        r.display_name AS role,
+        u.level
+      FROM team_user tu
+      JOIN public."users" u ON tu.user_id=u.id
+      JOIN roles r ON u.role_id=r.id
+      WHERE tu.team_id=$1::integer
+    `, [team_id]);
+  return result == null ? void 0 : result.rows;
+});
+_TeamUserService.GET_USER_TEAM = (user_id) => __async(_TeamUserService, null, function* () {
+  var _a;
+  const result = yield query(`
+    SELECT
+      team_id
+    FROM 
+      team_user
+    WHERE
+      user_id=$1::integer
+    `, [user_id]);
+  return (_a = result == null ? void 0 : result.rows.at(0)) == null ? void 0 : _a.team_id;
+});
+_TeamUserService.ADD_MEMBER = (user_id, team_id) => __async(_TeamUserService, null, function* () {
+  const result = yield query(`
+      INSERT INTO team_user (
+        user_id,
+        team_id
+      ) VALUES ($1::integer, $2::integer)
+      RETURNING *
+    `, [user_id, team_id]);
+  return result == null ? void 0 : result.rows.at(0);
+});
+_TeamUserService.CHECK_MEMBER_EXISTANCE = (user_id) => __async(_TeamUserService, null, function* () {
+  const result = yield query(`
+      SELECT
+        *
+      FROM team_user
+      WHERE
+        user_id=$1::integer
+    `, [user_id]);
+  return (result == null ? void 0 : result.rowCount) ? true : false;
+});
+_TeamUserService.REMOVE_MEMBER = (user_id, team_id) => __async(_TeamUserService, null, function* () {
+  yield query(`
+      DELETE FROM team_user
+      WHERE user_id=$1::integer
+      AND team_id=$2::integer
+    `, [user_id, team_id]);
+});
+_TeamUserService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamUserService, null, function* () {
+  const result = yield query(`
+    SELECT 1 FROM team_user tu
+    JOIN public."users" u ON tu.user_id = u.id
+    WHERE tu.team_id = $1::integer
+    AND u.level = 'lead'
+  `, [team_id]);
+  return (result == null ? void 0 : result.rowCount) ? true : false;
+});
+var TeamUserService = _TeamUserService;
+var team_user_service_default = TeamUserService;
 
 // src/controller/employee-controller.ts
 var getAllEmployessClient = asyncHandler((req, res) => __async(void 0, null, function* () {
@@ -680,16 +780,26 @@ var getAllEmployees = asyncHandler((req, res) => __async(void 0, null, function*
   });
 }));
 var getEmployeeById = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const result = yield employee_service_default.GET_BY_ID(req.params.user_id);
+  var _a;
+  const employeeId = Number(req.params.user_id);
+  const result = yield employee_service_default.GET_BY_ID(employeeId);
+  const resultCount = (_a = result == null ? void 0 : result.rowCount) != null ? _a : 0;
+  if (!(resultCount > 0)) {
+    return res.status(404).json({
+      status: 404,
+      message: `Employee not found`
+    });
+  }
   res.status(import_http_status_codes3.StatusCodes.OK).json({
     status: import_http_status_codes3.StatusCodes.OK,
     success: true,
-    data: result
+    data: result == null ? void 0 : result.rows.at(0)
   });
 }));
 var deleteEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const user_id = Number(req.params.user_id);
   yield employee_service_default.DELETE(
-    Number(req.params.user_id)
+    user_id
   );
   res.status(import_http_status_codes3.StatusCodes.OK).json({
     status: import_http_status_codes3.StatusCodes.OK,
@@ -698,7 +808,9 @@ var deleteEmployee = asyncHandler((req, res) => __async(void 0, null, function* 
   });
 }));
 var createEmployee = asyncHandler((req, res) => __async(void 0, null, function* () {
+  const team_id = Number(req.body.team_id);
   const result = yield employee_service_default.STORE(req.body);
+  yield team_user_service_default.ADD_MEMBER(result == null ? void 0 : result.id, team_id);
   res.status(import_http_status_codes3.StatusCodes.OK).json({
     status: import_http_status_codes3.StatusCodes.CREATED,
     success: true,
@@ -747,19 +859,22 @@ var import_zod2 = require("zod");
 var CreateUserSchema = import_zod2.z.object({
   email: import_zod2.z.string({ message: "The email field is required" }).email({ message: "Please provide a valid email address" }).min(1, { message: "The email field cannot be empty" }).max(100, { message: "The email address cannot exceed 100 characters" }),
   password: import_zod2.z.string({ message: "The password field is required" }).min(1, { message: "The password field cannot be empty" }).max(100, { message: "The password cannot exceed 100 characters" }),
-  full_name: import_zod2.z.string({ message: "The full name field is required" }).min(1, { message: "The full name field cannot be empty" }).max(100, { message: "The full name cannot exceed 100 characters" }),
-  username: import_zod2.z.string({ message: "The username field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" }),
+  name: import_zod2.z.string({ message: "The full name field is required" }).min(1, { message: "The full name field cannot be empty" }).max(100, { message: "The full name cannot exceed 100 characters" }),
   role_id: import_zod2.z.number({ message: "The role ID field is required" }).min(1, { message: "Role ID must be at least 1" }),
   phone: import_zod2.z.string({ message: "The phone field is required" }),
-  level: import_zod2.z.enum(["hr", "employee", "lead"], { message: "The value you provide is not acceptable" })
+  level: import_zod2.z.enum(["hr", "employee", "lead"], { message: "The value you provide is not acceptable" }),
+  team_id: import_zod2.z.number({ message: "The team ID field is required" }).min(1, { message: "Team ID must be at least 1" })
 });
 var UpdateUserProfileSchema = import_zod2.z.object({
+  id: import_zod2.z.number({ message: "The ID is required" }),
   email: import_zod2.z.string({ message: "The email field is required" }).email({ message: "Please provide a valid email address" }).min(1, { message: "The email field cannot be empty" }).max(100, { message: "The email address cannot exceed 100 characters" }),
-  password: import_zod2.z.string({ message: "The password field is required" }).min(1, { message: "The password field cannot be empty" }).max(100, { message: "The password cannot exceed 100 characters" }),
-  full_name: import_zod2.z.string({ message: "The full name field is required" }).min(1, { message: "The full name field cannot be empty" }).max(100, { message: "The full name cannot exceed 100 characters" }),
-  username: import_zod2.z.string({ message: "The username field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" }),
-  role_id: import_zod2.z.number({ message: "The role_id field is required" }).min(1, { message: "The username field cannot be empty" }),
-  phone: import_zod2.z.string({ message: "The phone field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" })
+  name: import_zod2.z.string({ message: "The full name field is required" }).min(1, { message: "The full name field cannot be empty" }).max(100, { message: "The full name cannot exceed 100 characters" }),
+  phone: import_zod2.z.string({ message: "The phone field is required" }).min(1, { message: "The username field cannot be empty" }).max(100, { message: "The username cannot exceed 100 characters" }),
+  level: import_zod2.z.enum(["hr", "employee", "lead"], {
+    message: "Only accept hr/employee/lead!"
+  }),
+  role_id: import_zod2.z.number({ message: "The role ID field is required" }).min(1, { message: "Role ID must be at least 1" }),
+  team_id: import_zod2.z.number({ message: "The team ID field is required" }).min(1, { message: "Team ID must be at least 1" })
 });
 
 // src/route/employee-route.ts
@@ -815,79 +930,20 @@ _TeamService.DELETE_TEAM = (team_id) => __async(_TeamService, null, function* ()
       WHERE team_id=$1::integer
     `, [team_id]);
 });
+_TeamService.CHECK_DUPLICATE_ENTRY = (team, excludeId) => __async(_TeamService, null, function* () {
+  const queryStr = `
+    SELECT id
+    FROM teams
+    WHERE (name = $1)
+    ${excludeId !== void 0 ? "AND id != $2" : ""}
+    LIMIT 1
+  `;
+  const params = excludeId !== void 0 ? [team.name, excludeId] : [team.name];
+  const result = yield query(queryStr, params);
+  return result.rowCount > 0;
+});
 var TeamService = _TeamService;
 var team_service_default = TeamService;
-
-// src/services/team-role-service.ts
-var _TeamUserService = class _TeamUserService {
-};
-_TeamUserService.GET_TEAM_MEMBER = (team_id) => __async(_TeamUserService, null, function* () {
-  const result = yield query(`
-      SELECT
-        u.email,
-        u.full_name,
-        u.username,
-        u.phone,
-        r.display_name AS role,
-        u.level
-      FROM team_user tu
-      JOIN public."users" u ON tu.user_id=u.id
-      JOIN roles r ON u.role_id=r.id
-      WHERE team_id=$1::integer
-    `, [team_id]);
-  return result == null ? void 0 : result.rows;
-});
-_TeamUserService.GET_USER_TEAM = (user_id) => __async(_TeamUserService, null, function* () {
-  const result = yield query(`
-    SELECT
-      team_id
-    FROM 
-      team_user
-    WHERE
-      user_id=$1::integer
-    `, [user_id]);
-  return result == null ? void 0 : result.rows;
-});
-_TeamUserService.ADD_MEMBER = (user_id, team_id) => __async(_TeamUserService, null, function* () {
-  const result = yield query(`
-      INSERT INTO team_user (
-        user_id,
-        team_id
-      ) VALUES ($1::integer, $2::integer)
-      RETURNING *
-    `, [user_id, team_id]);
-  return result == null ? void 0 : result.rows.at(0);
-});
-_TeamUserService.CHECK_MEMBER_EXISTANCE = (user_id, team_id) => __async(_TeamUserService, null, function* () {
-  const result = yield query(`
-      SELECT
-        *
-      FROM team_user
-      WHERE
-        user_id=$1::integer
-      AND 
-        team_id=$2::integer
-    `, [user_id, team_id]);
-  return (result == null ? void 0 : result.rowCount) ? true : false;
-});
-_TeamUserService.REMOVE_MEMBER = (user_id, team_id) => __async(_TeamUserService, null, function* () {
-  yield query(`
-      DELETE FROM team_user
-      WHERE user_id=$1::integer
-      AND team_id=$2::integer
-    `, [user_id, team_id]);
-});
-_TeamUserService.CHECK_LEAD_EXISTENCE = (team_id) => __async(_TeamUserService, null, function* () {
-  const result = yield query(`
-    SELECT 1 FROM team_user tu
-    JOIN public."users" u ON tu.user_id = u.id
-    WHERE tu.team_id = $1::integer
-    AND u.level = 'lead'
-  `, [team_id]);
-  return (result == null ? void 0 : result.rowCount) ? true : false;
-});
-var TeamUserService = _TeamUserService;
-var team_role_service_default = TeamUserService;
 
 // src/services/team-project-service.ts
 var _TeamProjectService = class _TeamProjectService {
@@ -923,11 +979,11 @@ _TeamProjectService.GET_BY_TEAM_ID = (team_id) => __async(_TeamProjectService, n
     FROM 
       team_project tp
     JOIN
-      project p
+      projects p
     ON 
       tp.project_id=p.id
     WHERE
-      tp.project_id=$1::integer
+      tp.team_id=$1::integer
     `, [team_id]);
   return result == null ? void 0 : result.rows;
 });
@@ -940,6 +996,18 @@ _TeamProjectService.REMOVE_PROJECT = (project_id, team_id) => __async(_TeamProje
     AND
       team_id=$2::integer
     `, [project_id, team_id]);
+});
+_TeamProjectService.CHECK_TEAM_PERMISSION = (teamId, projectId) => __async(_TeamProjectService, null, function* () {
+  const result = yield query(`
+    SELECT
+      *
+    FROM team_project
+    WHERE
+      team_id=$1::integer
+    AND
+      project_id=$2::integer
+    `, [teamId, projectId]);
+  return (result == null ? void 0 : result.rowCount) > 0;
 });
 var TeamProjectService = _TeamProjectService;
 var team_project_service_default = TeamProjectService;
@@ -957,9 +1025,9 @@ _TeamController.INDEX = asyncHandler((req, res) => __async(_TeamController, null
 }));
 // SHOW
 _TeamController.SHOW = asyncHandler((req, res) => __async(_TeamController, null, function* () {
-  const team_id = Number(req.body.team_id);
+  const team_id = Number(req.params.team_id);
   const teamDetailsResult = yield team_service_default.GET_BY_ID(team_id);
-  const memberResult = yield team_role_service_default.GET_TEAM_MEMBER(team_id);
+  const memberResult = yield team_user_service_default.GET_TEAM_MEMBER(team_id);
   res.status(200).json({
     status: 200,
     success: true,
@@ -970,6 +1038,13 @@ _TeamController.SHOW = asyncHandler((req, res) => __async(_TeamController, null,
   });
 }));
 _TeamController.CREATE_TEAM = asyncHandler((req, res) => __async(_TeamController, null, function* () {
+  const isValid = yield Validation.isValid(req.body);
+  if (!isValid.valid) {
+    return res.status(403).json({
+      status: 403,
+      message: isValid.message
+    });
+  }
   const result = yield team_service_default.CREATE_TEAM(req.body);
   res.status(201).json({
     status: 201,
@@ -988,7 +1063,7 @@ _TeamController.ADD_MEMBER = asyncHandler((req, res) => __async(_TeamController,
       message: validation.message
     });
   }
-  const result = yield team_role_service_default.ADD_MEMBER(
+  const result = yield team_user_service_default.ADD_MEMBER(
     user_id,
     team_id
   );
@@ -1002,7 +1077,7 @@ _TeamController.ADD_MEMBER = asyncHandler((req, res) => __async(_TeamController,
 _TeamController.REMOVE_MEMBER = asyncHandler((req, res) => __async(_TeamController, null, function* () {
   const user_id = Number(req.body.user_id);
   const team_id = Number(req.body.team_id);
-  const result = yield team_role_service_default.REMOVE_MEMBER(user_id, team_id);
+  const result = yield team_user_service_default.REMOVE_MEMBER(user_id, team_id);
   res.status(200).json({
     status: 200,
     success: true,
@@ -1011,7 +1086,7 @@ _TeamController.REMOVE_MEMBER = asyncHandler((req, res) => __async(_TeamControll
   });
 }));
 _TeamController.DESTROY = asyncHandler((req, res) => __async(_TeamController, null, function* () {
-  const team_id = Number(req.body.team_id);
+  const team_id = Number(req.params.team_id);
   yield team_service_default.DELETE_TEAM(team_id);
   res.status(200).json({
     status: 200,
@@ -1050,6 +1125,19 @@ _TeamController.REMOVE_PROJECT_FROM_TEAM = asyncHandler((req, res) => __async(_T
 var TeamController = _TeamController;
 var _Validation = class _Validation {
 };
+_Validation.isValid = (team, isUpdate = false) => __async(_Validation, null, function* () {
+  const isDuplicated = yield team_service_default.CHECK_DUPLICATE_ENTRY(team);
+  isUpdate ? team.id : void 0;
+  if (isDuplicated) {
+    return {
+      valid: false,
+      message: `Team with the name ${team.name} is already exist`
+    };
+  }
+  return {
+    valid: true
+  };
+});
 _Validation.validateProjectOwnership = (project_id, team_id) => __async(_Validation, null, function* () {
   const isAssigned = yield team_project_service_default.GET_BY_ID(project_id, team_id);
   if (isAssigned) {
@@ -1064,7 +1152,7 @@ _Validation.validateProjectOwnership = (project_id, team_id) => __async(_Validat
   };
 });
 _Validation.validateMembership = (user_id, team_id) => __async(_Validation, null, function* () {
-  const isMember = yield team_role_service_default.CHECK_MEMBER_EXISTANCE(user_id, team_id);
+  const isMember = yield team_user_service_default.CHECK_MEMBER_EXISTANCE(user_id);
   if (isMember) {
     return {
       valid: false,
@@ -1079,7 +1167,7 @@ _Validation.validateMembership = (user_id, team_id) => __async(_Validation, null
     };
   }
   if ((user == null ? void 0 : user.level) === "lead") {
-    const hasLead = yield team_role_service_default.CHECK_LEAD_EXISTENCE(team_id);
+    const hasLead = yield team_user_service_default.CHECK_LEAD_EXISTENCE(team_id);
     if (hasLead) {
       return {
         valid: false,
@@ -1095,14 +1183,20 @@ _Validation.validateMembership = (user_id, team_id) => __async(_Validation, null
 var Validation = _Validation;
 var team_controller_default = TeamController;
 
+// src/schema/team-schema.ts
+var import_zod3 = require("zod");
+var CreateTeamSchema = import_zod3.z.object({
+  name: import_zod3.z.string({ message: "The Name field is required" })
+});
+
 // src/route/team-route.ts
 var route2 = import_express2.default.Router();
 route2.get("/", team_controller_default.INDEX);
-route2.post("/", team_controller_default.CREATE_TEAM);
-route2.get("/show", team_controller_default.SHOW);
+route2.post("/", validateData(CreateTeamSchema), team_controller_default.CREATE_TEAM);
+route2.get("/:team_id", team_controller_default.SHOW);
 route2.post("/add-member", team_controller_default.ADD_MEMBER);
 route2.delete("/remove-member", team_controller_default.REMOVE_MEMBER);
-route2.delete("/delete", team_controller_default.DESTROY);
+route2.delete("/:team_id", team_controller_default.DESTROY);
 route2.post("/assign-project", team_controller_default.ASSIGN_PROJECT);
 route2.delete("/remove-project", team_controller_default.REMOVE_PROJECT_FROM_TEAM);
 var team_route_default = route2;
@@ -1270,15 +1364,15 @@ var TaskController = _TaskController;
 var task_controller_default = TaskController;
 
 // src/schema/task-schema.ts
-var import_zod3 = require("zod");
-var taskItemSchema = import_zod3.z.object({
-  project_id: import_zod3.z.number().min(1, { message: "Project name is required" }),
-  task: import_zod3.z.string().min(1, { message: "Description is required" }),
-  start: import_zod3.z.string().min(1, { message: "Start time is required" }),
-  end: import_zod3.z.string().min(1, { message: "End time is required" })
+var import_zod4 = require("zod");
+var taskItemSchema = import_zod4.z.object({
+  project_id: import_zod4.z.number().min(1, { message: "Project name is required" }),
+  task: import_zod4.z.string().min(1, { message: "Description is required" }),
+  start: import_zod4.z.string().min(1, { message: "Start time is required" }),
+  end: import_zod4.z.string().min(1, { message: "End time is required" })
 });
-var taskDataSchema = import_zod3.z.object({
-  data: import_zod3.z.array(taskItemSchema).min(1, { message: "At least one task item is required" })
+var taskDataSchema = import_zod4.z.object({
+  data: import_zod4.z.array(taskItemSchema).min(1, { message: "At least one task item is required" })
 });
 
 // src/route/task-route.ts
@@ -1486,12 +1580,12 @@ _AuthService.LOGIN = (loginRequest) => __async(_AuthService, null, function* () 
       SELECT 
         u.id, 
         u.email, 
-        u.full_name, 
-        u.username, 
+        u.name, 
         u.phone,
         u.level,
         r.role_name, 
-        r.display_name
+        r.display_name,
+        u.team_id
       FROM 
         public."users" u
       JOIN 
@@ -1515,7 +1609,7 @@ var login = asyncHandler((req, res) => __async(void 0, null, function* () {
     return res.status(import_http_status_codes7.StatusCodes.BAD_REQUEST).json(errorResponse);
   }
   const user = result == null ? void 0 : result.rows.at(0);
-  const token = import_jsonwebtoken2.default.sign({ user }, "test", { expiresIn: "1h" });
+  const token = import_jsonwebtoken2.default.sign({ user }, "test", { expiresIn: "1d" });
   res.status(import_http_status_codes7.StatusCodes.OK).json({
     status: import_http_status_codes7.StatusCodes.OK,
     success: true,
@@ -1531,9 +1625,22 @@ var logout = (req, res) => {
   });
 };
 
+// src/schema/auth-schema.ts
+var import_zod5 = require("zod");
+var userRegistrationSchema = import_zod5.z.object({
+  email: import_zod5.z.string().min(1, { message: "Email is required" }).max(100, { message: "Email must not exceed 100 characters" }).email({ message: "Invalid email format" }),
+  password: import_zod5.z.string().min(1, { message: "Password is required" }).max(100, { message: "Password must not exceed 100 characters" }),
+  full_name: import_zod5.z.string().min(1, { message: "Full name is required" }).max(100, { message: "Full name must not exceed 100 characters" }),
+  username: import_zod5.z.string().min(1, { message: "Username is required" }).max(100, { message: "Username must not exceed 100 characters" })
+});
+var loginSchema = import_zod5.z.object({
+  email: import_zod5.z.string({ message: "The Email field is required" }).max(100, { message: "Email must not exceed 100 characters" }).email({ message: "Invalid email format" }),
+  password: import_zod5.z.string({ message: "The Password field is required" }).max(100, { message: "Password must not exceed 100 characters" })
+});
+
 // src/route/auth-route.ts
 var route6 = import_express6.default.Router();
-route6.post("/", login);
+route6.post("/", validateData(loginSchema), login);
 route6.post("/logout", logout);
 var auth_route_default = route6;
 
@@ -1550,7 +1657,7 @@ _AbsenceService.GET_ALL = () => __async(_AbsenceService, null, function* () {
   const fetchAbsenceResult = yield query(`
     SELECT
         u.id AS user_id,
-        u.full_name AS name,
+        u.name AS name,
         ARRAY_AGG(
             JSON_BUILD_OBJECT(
                 'date', a.date,
@@ -1560,7 +1667,7 @@ _AbsenceService.GET_ALL = () => __async(_AbsenceService, null, function* () {
         ) AS absences
     FROM absences a
     JOIN users u ON a.user_id = u.id
-    GROUP BY u.id, u.full_name
+    GROUP BY u.id, u.name
     ORDER BY u.id;
     `);
   return (fetchAbsenceResult == null ? void 0 : fetchAbsenceResult.rows) || [];
@@ -1755,19 +1862,19 @@ var validateAbsenceRequest = (user_id, date, type) => __async(void 0, null, func
 });
 
 // src/schema/absence-schema.ts
-var import_zod4 = require("zod");
-var absenceSchema = import_zod4.z.object({
-  user_id: import_zod4.z.number().min(1, { message: "User ID is required" }),
-  date: import_zod4.z.string().min(1, { message: "Start time is required" }),
-  type: import_zod4.z.enum([
+var import_zod6 = require("zod");
+var absenceSchema = import_zod6.z.object({
+  user_id: import_zod6.z.number().min(1, { message: "User ID is required" }),
+  date: import_zod6.z.string().min(1, { message: "Start time is required" }),
+  type: import_zod6.z.enum([
     "WFH",
     "AL",
     "SL"
   ], { message: "Type not match!! The only accepted value are 'WFH', 'AL', 'SL'" })
 });
-var absenceApprovalSchema = import_zod4.z.object({
-  is_approved: import_zod4.z.boolean({ message: "Type not match!! The only accepted value are 'approved' and 'declined'" }),
-  reason: import_zod4.z.string().optional()
+var absenceApprovalSchema = import_zod6.z.object({
+  is_approved: import_zod6.z.boolean({ message: "Type not match!! The only accepted value are 'approved' and 'declined'" }),
+  reason: import_zod6.z.string().optional()
 }).refine((data) => {
   if (!data.is_approved && (!data.reason || data.reason.trim() === "")) {
     return false;
@@ -1812,7 +1919,7 @@ _ProjectService.GET_BY_ID = (project_id) => __async(_ProjectService, null, funct
     FROM projects
     WHERE id=$1::integer
     `, [project_id]);
-  return fetchProjectByIdResult == null ? void 0 : fetchProjectByIdResult.rows.at(0);
+  return fetchProjectByIdResult;
 });
 _ProjectService.STORE = (project) => __async(_ProjectService, null, function* () {
   const storeProjectResult = yield query(`
@@ -1855,7 +1962,15 @@ var project_service_default = ProjectService;
 
 // src/controller/project-controller.ts
 var getAllProject = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const result = yield project_service_default.GET_ALL();
+  var _a;
+  const teamId = (_a = req.user) == null ? void 0 : _a.team_id;
+  if (!teamId) {
+    return res.status(400).json({
+      status: 403,
+      message: `No Team ID was specified`
+    });
+  }
+  const result = yield team_project_service_default.GET_BY_TEAM_ID(teamId);
   res.status(import_http_status_codes9.StatusCodes.OK).json({
     status: import_http_status_codes9.StatusCodes.OK,
     success: true,
@@ -1863,19 +1978,34 @@ var getAllProject = asyncHandler((req, res) => __async(void 0, null, function* (
   });
 }));
 var getProjectById = asyncHandler((req, res) => __async(void 0, null, function* () {
-  const project_id = Number(req.params.project_id);
-  if (!project_id) {
-    const response = {
-      status: import_http_status_codes9.StatusCodes.BAD_REQUEST,
-      message: "Project ID not specified"
-    };
-    return res.status(import_http_status_codes9.StatusCodes.BAD_REQUEST).json(response);
+  var _a, _b;
+  const projectId = Number(req.params.project_id);
+  const teamId = Number((_a = req.user) == null ? void 0 : _a.team_id);
+  if (!teamId) {
+    return res.status(400).json({
+      status: 403,
+      message: `No Team ID was specified`
+    });
   }
-  const result = yield project_service_default.GET_BY_ID(project_id);
+  const isPermitted = yield team_project_service_default.CHECK_TEAM_PERMISSION(teamId, projectId);
+  if (!isPermitted) {
+    return res.status(404).json({
+      status: 404,
+      message: `Your team was not assigned for this project`
+    });
+  }
+  const result = yield project_service_default.GET_BY_ID(projectId);
+  const resultCount = (_b = result == null ? void 0 : result.rowCount) != null ? _b : 0;
+  if (!(resultCount > 0)) {
+    return res.status(404).json({
+      status: 404,
+      message: `Project not found`
+    });
+  }
   res.status(import_http_status_codes9.StatusCodes.OK).json({
     status: import_http_status_codes9.StatusCodes.OK,
     success: true,
-    data: result
+    data: result == null ? void 0 : result.rows.at(0)
   });
 }));
 var createNewProject = asyncHandler((req, res) => __async(void 0, null, function* () {
@@ -1909,8 +2039,8 @@ var deleteProject = asyncHandler((req, res) => __async(void 0, null, function* (
 
 // src/route/project-route.ts
 var route8 = import_express8.default.Router();
-route8.get("/", getAllProject);
 route8.get("/:project_id", getProjectById);
+route8.get("/", getAllProject);
 route8.post("/", createNewProject);
 route8.put("/:project_id", updateProject);
 route8.delete("/:project_id", deleteProject);
@@ -1928,9 +2058,11 @@ var _RoleService = class _RoleService {
 _RoleService.GET_ALL = () => __async(_RoleService, null, function* () {
   const fethAllRoleResult = yield query(`
     SELECT 
-      *
+      id,
+      role_name,
+      display_name AS role
     FROM roles
-    SORT BY role_name
+    ORDER BY role_name
     `);
   return (fethAllRoleResult == null ? void 0 : fethAllRoleResult.rows) || [];
 });
@@ -1954,7 +2086,7 @@ _RoleService.STORE = (role) => __async(_RoleService, null, function* () {
     `, [role.role_name, role.display_name]);
   return storeRoleResult == null ? void 0 : storeRoleResult.rows.at(0);
 });
-_RoleService.UPDATE = (role_id, role) => __async(_RoleService, null, function* () {
+_RoleService.UPDATE = (role) => __async(_RoleService, null, function* () {
   const updateRoleResult = yield query(`
     UPDATE roles
     SET
@@ -1962,17 +2094,38 @@ _RoleService.UPDATE = (role_id, role) => __async(_RoleService, null, function* (
       display_name=$2
     WHERE id=$3
     RETURNING *
-    `, [role.role_name, role.display_name, role_id]);
+    `, [role.role_name, role.display_name, role.id]);
   return updateRoleResult == null ? void 0 : updateRoleResult.rows.at(0);
 });
 _RoleService.DELETE = (role_id) => __async(_RoleService, null, function* () {
   const deleteRoleResult = yield query(`
-    DELETE roles
-    WHERE id=$1
+    DELETE FROM roles
+    WHERE id=$1::integer
     `, [role_id]);
+});
+_RoleService.CHECK_DUPLICATE_ENTRY = (role, excludeId) => __async(_RoleService, null, function* () {
+  const queryStr = `
+    SELECT id
+    FROM roles
+    WHERE (display_name = $1 OR role_name = $2)
+    ${excludeId !== void 0 ? "AND id != $3" : ""}
+    LIMIT 1
+  `;
+  const params = excludeId !== void 0 ? [role.display_name, role.role_name, excludeId] : [role.display_name, role.role_name];
+  const result = yield query(queryStr, params);
+  return result.rowCount > 0;
 });
 var RoleService = _RoleService;
 var role_service_default = RoleService;
+
+// src/helper/function-helpter.ts
+var import_slugify = __toESM(require("slugify"));
+var transformText = (text) => {
+  return (0, import_slugify.default)(text, {
+    lower: true,
+    trim: true
+  });
+};
 
 // src/controller/role-controller.ts
 var _RoleController = class _RoleController {
@@ -2002,7 +2155,19 @@ _RoleController.SHOW = asyncHandler((req, res) => __async(_RoleController, null,
   });
 }));
 _RoleController.POST = asyncHandler((req, res) => __async(_RoleController, null, function* () {
-  const result = role_service_default.STORE(req.body);
+  const display_name = req.body.display_name;
+  const newRole = {
+    display_name,
+    role_name: transformText(display_name)
+  };
+  const isValid = yield Validation2.isValid(newRole);
+  if (!isValid.valid) {
+    return res.status(403).json({
+      status: 403,
+      message: isValid.message
+    });
+  }
+  const result = yield role_service_default.STORE(newRole);
   res.status(import_http_status_codes10.StatusCodes.CREATED).json({
     status: import_http_status_codes10.StatusCodes.CREATED,
     success: true,
@@ -2011,11 +2176,21 @@ _RoleController.POST = asyncHandler((req, res) => __async(_RoleController, null,
   });
 }));
 _RoleController.UPDATE = asyncHandler((req, res) => __async(_RoleController, null, function* () {
-  const role_id = Number(req.params.role_id);
-  const result = role_service_default.UPDATE(
-    role_id,
-    req.body
-  );
+  const role_id = Number(req.body.id);
+  const display_name = req.body.display_name;
+  const role = {
+    id: role_id,
+    display_name,
+    role_name: transformText(display_name)
+  };
+  const isValid = yield Validation2.isValid(role, true);
+  if (!isValid.valid) {
+    return res.status(403).json({
+      status: 403,
+      message: isValid.message
+    });
+  }
+  const result = yield role_service_default.UPDATE(role);
   res.status(import_http_status_codes10.StatusCodes.OK).json({
     status: import_http_status_codes10.StatusCodes.OK,
     success: true,
@@ -2025,7 +2200,14 @@ _RoleController.UPDATE = asyncHandler((req, res) => __async(_RoleController, nul
 }));
 _RoleController.DELETE = asyncHandler((req, res) => __async(_RoleController, null, function* () {
   const role_id = Number(req.params.role_id);
-  role_service_default.DELETE(role_id);
+  const isExist = yield Validation2.isExist(role_id);
+  if (!isExist.valid) {
+    return res.status(404).json({
+      status: 404,
+      message: isExist.message
+    });
+  }
+  yield role_service_default.DELETE(role_id);
   res.status(import_http_status_codes10.StatusCodes.OK).json({
     status: import_http_status_codes10.StatusCodes.OK,
     success: true,
@@ -2033,58 +2215,86 @@ _RoleController.DELETE = asyncHandler((req, res) => __async(_RoleController, nul
   });
 }));
 var RoleController = _RoleController;
+var Validation2 = class {
+  static isValid(role, isUpdate = false) {
+    return __async(this, null, function* () {
+      const isDuplicatedEntry = yield role_service_default.CHECK_DUPLICATE_ENTRY(
+        role,
+        isUpdate ? role.id : void 0
+      );
+      if (isDuplicatedEntry) {
+        return {
+          valid: false,
+          message: `A role with the name ${role.display_name} already exists`
+        };
+      }
+      return {
+        valid: true
+      };
+    });
+  }
+  static isExist(role_id) {
+    return __async(this, null, function* () {
+      const result = yield role_service_default.GET_BY_ID(role_id);
+      if (!result) {
+        return {
+          valid: false,
+          message: `Role not found`
+        };
+      }
+      return {
+        valid: true
+      };
+    });
+  }
+};
 var role_controller_default = RoleController;
+
+// src/schema/role-schema.ts
+var import_zod7 = require("zod");
+var CreateRoleSchema = import_zod7.z.object({
+  display_name: import_zod7.z.string({ message: "The Display Name field is required" })
+});
+var UpdateRoleSchema = import_zod7.z.object({
+  id: import_zod7.z.number({ message: "The ID field is required" }),
+  display_name: import_zod7.z.string({ message: "The Display Name field is required" })
+});
 
 // src/route/role-route.ts
 var route9 = import_express9.default.Router();
 route9.get("/", role_controller_default.GET);
 route9.get("/:role_id", role_controller_default.SHOW);
-route9.post("/", role_controller_default.POST);
-route9.put("/:role_id", role_controller_default.UPDATE);
+route9.post("/", validateData(CreateRoleSchema), role_controller_default.POST);
+route9.put("/", validateData(UpdateRoleSchema), role_controller_default.UPDATE);
 route9.delete("/:role_id", role_controller_default.DELETE);
 var role_route_default = route9;
 
-// src/middleware/level-middleware.ts
-var verifyRole = (allowedLevels) => {
-  return (req, res, next) => {
-    const user = req.user;
-    if (!user) {
-      return res.json({
-        status: 400,
-        message: `No user logged in yet.`
-      });
-    }
-    const allowed = allowedLevels.includes(user.level);
-    if (!allowed) {
-      return res.json({
-        status: 403,
-        message: `This route is protected`
-      });
-    }
-    next();
-  };
-};
+// src/routes.ts
+var routesWithAuth = (0, import_express10.Router)();
+routesWithAuth.use("/employees/", verifyRole(["hr"]), employee_route_default);
+routesWithAuth.use("/tasks/", task_route_default);
+routesWithAuth.use("/profiles/", profile_route_default);
+routesWithAuth.use("/absences/", absence_route_default);
+routesWithAuth.use("/projects/", project_route_default);
+var routesWithoutAuth = (0, import_express10.Router)();
+routesWithoutAuth.use("/teams", team_route_default);
+routesWithoutAuth.use("/roles", role_route_default);
 
 // src/server.ts
 require("dotenv").config();
 var asyncHandler2 = () => __async(exports, null, function* () {
   yield pg_default.connect();
-  const app = (0, import_express10.default)();
+  const app = (0, import_express11.default)();
   const PORT = process.env.PORT || 8080;
   app.use((0, import_cookie_parser.default)());
   app.use((0, import_helmet.default)());
   app.use((0, import_cors.default)());
-  app.use(import_express10.default.json());
-  app.use(import_express10.default.urlencoded({ extended: true }));
-  app.use(import_express10.default.static("public"));
+  app.use(import_express11.default.json());
+  app.use(import_express11.default.urlencoded({ extended: true }));
+  app.use(import_express11.default.static("public"));
   app.use("/api/auth/", auth_route_default);
-  app.use("/api/employees/", verifyToken, verifyRole(["hr"]), employee_route_default);
-  app.use("/api/tasks/", verifyToken, task_route_default);
-  app.use("/api/profiles/", verifyToken, profile_route_default);
-  app.use("/api/absences/", verifyToken, absence_route_default);
-  app.use("/api/projects/", project_route_default);
-  app.use("/api/teams/", team_route_default);
-  app.use("/api/roles/", role_route_default);
+  app.use("/api", routesWithoutAuth);
+  app.use("/api", verifyToken, routesWithAuth);
   app.use(notFoundHandler);
   app.use(errorHandler);
   app.listen(

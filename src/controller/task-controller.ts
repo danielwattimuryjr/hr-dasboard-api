@@ -5,7 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import { asyncHandler } from "../helper/async-helper";
 import TaskService from "../services/task-service";
 import EmployeeService from "../services/employee-service";
-import TeamUserService from "../services/team-role-service";
+import TeamUserService from "../services/team-user-service";
 
 type TaskRequest = Request<{}, SuccessResponse<Task[]>, {
   data: Task[]

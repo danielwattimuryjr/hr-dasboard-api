@@ -1,5 +1,7 @@
 import * as express from 'express';
 
+export type KeysOfType<T> = keyof T;
+
 declare global {
   namespace Express {
     interface Request {
@@ -24,14 +26,15 @@ export type Employee = {
   id?: number;
   email: string;
   password?: string;
-  full_name: string;
+  name: string;
   username: string;
   role?: string;
   role_id?: number;
   display_name?: string;
   profile_pic?: string;
   phone?: string;
-  level?: EmployeeLevel
+  level?: EmployeeLevel,
+  team_id?: number
 }
 
 export type Role = {
@@ -92,3 +95,5 @@ export type TeamProject = {
 export type Period = "weekly" | "monthly" | null;
 
 export type EmployeeLevel = 'hr' | 'employee' | 'lead' | undefined;
+
+

@@ -6,7 +6,7 @@ class AbsenceService {
     const fetchAbsenceResult = await query<any>(`
     SELECT
         u.id AS user_id,
-        u.full_name AS name,
+        u.name AS name,
         ARRAY_AGG(
             JSON_BUILD_OBJECT(
                 'date', a.date,
@@ -16,7 +16,7 @@ class AbsenceService {
         ) AS absences
     FROM absences a
     JOIN users u ON a.user_id = u.id
-    GROUP BY u.id, u.full_name
+    GROUP BY u.id, u.name
     ORDER BY u.id;
     `);
 

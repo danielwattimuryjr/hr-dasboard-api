@@ -6,22 +6,21 @@ class TeamUserService {
     const result = await query<Employee>(`
       SELECT
         u.email,
-        u.full_name,
-        u.username,
+        u.name,
         u.phone,
         r.display_name AS role,
         u.level
       FROM team_user tu
       JOIN public."users" u ON tu.user_id=u.id
       JOIN roles r ON u.role_id=r.id
-      WHERE team_id=$1::integer
+      WHERE tu.team_id=$1::integer
     `, [team_id])
 
     return result?.rows
   }
 
   static GET_USER_TEAM = async (user_id: number) => {
-    const result = await query<{ team_id: number[] }>(`
+    const result = await query<{ team_id: number }>(`
     SELECT
       team_id
     FROM 
@@ -30,7 +29,7 @@ class TeamUserService {
       user_id=$1::integer
     `, [user_id])
 
-    return result?.rows
+    return result?.rows.at(0)?.team_id
   }
 
   static ADD_MEMBER = async (user_id: number, team_id: number) => {
@@ -45,16 +44,14 @@ class TeamUserService {
     return result?.rows.at(0)
   }
 
-  static CHECK_MEMBER_EXISTANCE = async (user_id: number, team_id: number) => {
+  static CHECK_MEMBER_EXISTANCE = async (user_id: number) => {
     const result = await query<number>(`
       SELECT
         *
       FROM team_user
       WHERE
         user_id=$1::integer
-      AND 
-        team_id=$2::integer
-    `, [user_id, team_id])
+    `, [user_id])
 
     return result?.rowCount ? true : false
   }
