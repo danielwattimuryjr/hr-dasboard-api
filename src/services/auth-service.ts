@@ -7,12 +7,12 @@ class AuthService {
       SELECT 
         u.id, 
         u.email, 
-        u.full_name, 
-        u.username, 
+        u.name, 
         u.phone,
         u.level,
         r.role_name, 
-        r.display_name
+        r.display_name,
+        u.team_id
       FROM 
         public."users" u
       JOIN 

@@ -2,27 +2,29 @@ import { query } from "../libs/pg";
 import { Role } from "../types";
 
 class RoleService {
-  static GET_ALL = async (): Promise<Role[]> => {
+  static GET = async (fields?: Record<string, any>) => {
+    const whereClauses: string[] = [];
+    const values: any[] = [];
+
+    for (const key in fields) {
+      if (fields.hasOwnProperty(key)) {
+        whereClauses.push(`${key} = $${values.length + 1}`);
+        values.push(fields[key]);
+      }
+    }
+    const whereClause = whereClauses.join(' AND ');
+
     const fethAllRoleResult = await query<Role>(`
-    SELECT 
-      *
-    FROM roles
-    SORT BY role_name
-    `)
-
-    return fethAllRoleResult?.rows || []
-  }
-
-  static GET_BY_ID = async (role_id: number) => {
-    const fetchRoleById = await query<Role>(`
     SELECT
+      id,
       role_name,
-      display_name
+      display_name AS "role"
     FROM roles
-    WHERE id=$1::integer
-    `, [role_id])
+    ${whereClause ? 'WHERE ' + whereClause : ''}
+    ORDER BY role_name
+    `, values)
 
-    return fetchRoleById?.rows.at(0)
+    return fethAllRoleResult
   }
 
   static STORE = async (role: Role) => {
@@ -37,7 +39,7 @@ class RoleService {
     return storeRoleResult?.rows.at(0)
   }
 
-  static UPDATE = async (role_id: number, role: Role) => {
+  static UPDATE = async (role: Role) => {
     const updateRoleResult = await query(`
     UPDATE roles
     SET
@@ -45,15 +47,15 @@ class RoleService {
       display_name=$2
     WHERE id=$3
     RETURNING *
-    `, [role.role_name, role.display_name, role_id])
+    `, [role.role_name, role.display_name, role.id])
 
     return updateRoleResult?.rows.at(0)
   }
 
   static DELETE = async (role_id: number): Promise<void> => {
     const deleteRoleResult = await query(`
-    DELETE roles
-    WHERE id=$1
+    DELETE FROM roles
+    WHERE id=$1::integer
     `, [role_id])
   }
 }

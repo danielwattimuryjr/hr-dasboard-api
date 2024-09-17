@@ -1,27 +1,28 @@
 import { query } from "../libs/pg"
-import { Project } from "../types"
+import { Project, TeamProject } from "../types"
 
 class ProjectService {
-  static GET_ALL = async (): Promise<Project[]> => {
-    const fetchProjectResult = await query<Project>(`
-    SELECT 
-      * 
-    FROM projects 
-    ORDER BY project_name
-    `)
+  static GET = async (fields?: Record<string, any>) => {
+    const whereClauses: string[] = [];
+    const values: any[] = [];
 
-    return fetchProjectResult?.rows || []
-  }
+    for (const key in fields) {
+      if (fields.hasOwnProperty(key)) {
+        whereClauses.push(`${key} = $${values.length + 1}`);
+        values.push(fields[key]);
+      }
+    }
+    const whereClause = whereClauses.join(' AND ');
 
-  static GET_BY_ID = async (project_id: number): Promise<Project | undefined> => {
-    const fetchProjectByIdResult = await query<Project>(`
-    SELECT 
-      *
+    const result = await query<Project>(`
+    SELECT
+     *
     FROM projects
-    WHERE id=$1::integer
-    `, [project_id])
+    ${whereClause ? 'WHERE ' + whereClause : ''}
+    ORDER BY project_name
+    `, values)
 
-    return fetchProjectByIdResult?.rows.at(0)
+    return result
   }
 
   static STORE = async (project: Project): Promise<Project | undefined> => {
@@ -35,14 +36,14 @@ class ProjectService {
     return storeProjectResult?.rows.at(0)
   }
 
-  static UPDATE = async (project_id: number, project: Project): Promise<Project | undefined> => {
+  static UPDATE = async (project: Project): Promise<Project | undefined> => {
     const updateProjectResult = await query<Project>(`
       UPDATE projects
       SET
         project_name=$1
       WHERE id=$2::integer
       RETURNING *
-    `, [project.project_name, project_id])
+    `, [project.project_name, project.id])
 
     return updateProjectResult?.rows.at(0)
   }
@@ -52,18 +53,6 @@ class ProjectService {
       DELETE FROM projects
       WHERE id=$1::integer
     `, [project_id])
-  }
-
-  static ASSIGN_PROJECT = async (team_id: number, project_id: number) => {
-    await query(`
-    INSERT INTO project_team (
-      project_id,
-      team_id
-    ) VALUES (
-      $1,
-      $2
-    )
-    `, [team_id, project_id])
   }
 }
 

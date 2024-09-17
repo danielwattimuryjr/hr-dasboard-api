@@ -7,9 +7,9 @@ class ProfileService {
       SELECT
         u.id,
         u.email,
-        u.full_name,
-        u.username,
+        u.name,
         u.phone,
+        u.level,
         r.display_name as role
       FROM public."users" u
       JOIN roles r ON u.role_id = r.id
@@ -25,12 +25,11 @@ class ProfileService {
       SET
         email=$1
         password=$2
-        full_name=$3
-        username=$4
-        role_id=$5::integer
-        phone=$6
-      WHERE id=$7::integer
-    `, [employee.email, employee.password, employee.full_name, employee.username, employee.role, employee.phone, employee_id])
+        name=$3
+        role_id=$4::integer
+        phone=$5
+      WHERE id=$6::integer
+    `, [employee.email, employee.password, employee.name, employee.role, employee.phone, employee_id])
 
     return updateProfileResult?.rows.at(0)
   }

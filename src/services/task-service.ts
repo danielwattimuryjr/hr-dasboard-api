@@ -2,41 +2,30 @@ import { query } from "../libs/pg"
 import { Task } from "../types"
 
 class TaskService {
-  static GET_ALL = async (): Promise<Task[]> => {
-    const fetchTaskResult = await query<Task>(`
+  static GET = async (params: {
+    fields?: Array<keyof Task>
+    where?: Record<string, any>
+  }) => {
+    const whereClauses: string[] = [];
+    const values: any[] = [];
+
+    for (const key in params.where) {
+      if (params.where.hasOwnProperty(key)) {
+        whereClauses.push(`${key} = $${values.length + 1}`);
+        values.push(params.where[key]);
+      }
+    }
+    const whereClause = whereClauses.join(' AND ');
+
+    const fethAllRoleResult = await query<Task>(`
     SELECT
-      t.id,
-      t.task,
-      u.full_name,
-      t.start,
-      t."end",
-      p.project_name
-    FROM tasks t
-    JOIN users u ON t.user_id=u.id
-    JOIN projects p ON t.project_id=p.id
-    ORDER BY start, "end" ASC
-    `)
+      ${params.fields !== undefined ? params.fields.join(', ') : '*'}
+    FROM roles
+    ${whereClause ? 'WHERE ' + whereClause : ''}
+    ORDER BY role_name
+    `, values)
 
-    return fetchTaskResult?.rows || []
-  }
-
-  static GET_BY_ID = async (task_id: number): Promise<Task | undefined> => {
-    const fetchTaskResult = await query<Task>(`
-    SELECT
-      t.id,
-      t.task,
-      u.full_name,
-      t.start,
-      t."end",
-      p.project_name
-    FROM tasks t
-    JOIN users u ON t.user_id=u.id
-    JOIN projects p ON t.project_id=p.id
-    WHERE t.id=$1::integer
-    ORDER BY start, "end" ASC
-    `, [task_id])
-
-    return fetchTaskResult?.rows.at(0)
+    return fethAllRoleResult
   }
 
   static GET_BY_EMPLOYEE_ID = async (employee_id: number, period?: "weekly" | "monthly" | undefined) => {
@@ -57,7 +46,7 @@ class TaskService {
     SELECT
       t.id,
       t.task,
-      u.full_name,
+      u.name,
       t.start,
       t."end",
       p.project_name
@@ -92,29 +81,6 @@ class TaskService {
     const storeTaskResult = await query<Task>(queryStr, params)
 
     return storeTaskResult?.rows
-  }
-
-  static UPDATE = async (task_id: number, task: Task) => {
-    const updateTaskResult = await query<Task>(`
-    UPDATE tasks
-    SET 
-      project_id=$1,
-      task=$2,
-      start=$3,
-      "end"=$4,
-      user_id=$5
-    WHERE id=$6
-    RETURNING *
-    `, [task.project_id, task.task, task.start, task.end, task_id])
-
-    return updateTaskResult?.rows.at(0)
-  }
-
-  static DELETE = async (task_id: number) => {
-    await query(`
-    DELETE FROM tasks
-    WHERE id=$1::integer
-    `, [task_id])
   }
 }
 

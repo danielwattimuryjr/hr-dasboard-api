@@ -1,8 +1,8 @@
 import express from "express"
-import { getProfile, updateProfile } from "../controller/profile-controller"
+import ProfileController from "../profiles"
 const route = express.Router()
 
-route.get('/', getProfile)
-route.put('/', updateProfile)
+route.get('/', ProfileController.GET)
+route.put('/', ProfileController.UPDATE)
 
 export default route

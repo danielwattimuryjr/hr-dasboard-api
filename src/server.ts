@@ -10,18 +10,9 @@ import { notFoundHandler } from "./error/not-found";
 import { errorHandler } from "./error/error";
 import { verifyToken } from './middleware/token-middleware';
 import cookieParser from 'cookie-parser';
-import {
-  absenceRoute,
-  authRouter,
-  chartRouter,
-  employeeRouter,
-  profileRoute,
-  projectRoute,
-  roleRoute,
-  taskRouter,
-  teamRoute
-} from './route';
+import { routesWithAuth, routesWithoutAuth } from './routes'
 import { verifyRole } from './middleware/level-middleware';
+import { authRouter } from './route';
 
 const asyncHandler = async () => {
   await db.connect()
@@ -38,13 +29,8 @@ const asyncHandler = async () => {
   app.use(express.static('public'));
 
   app.use('/api/auth/', authRouter)
-  app.use('/api/employees/', verifyToken, verifyRole(['hr']), employeeRouter)
-  app.use('/api/tasks/', verifyToken, taskRouter)
-  app.use('/api/profiles/', verifyToken, profileRoute)
-  app.use('/api/absences/', verifyToken, absenceRoute)
-  app.use('/api/projects/', projectRoute)
-  app.use('/api/teams/', teamRoute)
-  app.use('/api/roles/', roleRoute)
+  app.use('/api', routesWithoutAuth)
+  app.use('/api', verifyToken, routesWithAuth)
 
   app.use(notFoundHandler);
   app.use(errorHandler);
