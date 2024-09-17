@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes';
 import { ErrorResponse } from '../types';
 import { query } from '../libs/pg';
 
-const validateData = (schema: z.ZodObject<any, any>) => {
+const validateData = (schema: z.ZodObject<any, any> | any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       schema.parse(req.body);

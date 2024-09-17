@@ -2,6 +2,36 @@ import { query } from "../libs/pg"
 import { Absence } from "../types";
 
 class AbsenceService {
+  static GET = async<TResult>(params: {
+    fields?: Array<string> | undefined
+    conditions?: Record<string, any>
+    groupBy?: Array<string>
+  }) => {
+    const whereClauses: string[] = [];
+    const values: any[] = [];
+
+    for (const key in params.conditions) {
+      if (params.conditions.hasOwnProperty(key) && params.conditions[key] !== undefined) {
+        whereClauses.push(key);
+        values.push(params.conditions[key]);
+      }
+    }
+    const whereClause = whereClauses.join(' AND ');
+    const joinedFields = (params.fields !== undefined) ? params.fields.length > 0 ? params.fields.join(', ') : '*' : '*'
+    const groupedByFields = (params.groupBy !== undefined) ? params.groupBy.length > 0 ? params.groupBy.join(', ') : '' : ''
+
+    const result = await query<TResult>(`
+    SELECT
+      ${joinedFields}
+    FROM absences 
+    ${whereClause ? 'WHERE ' + whereClause : ''}
+    ${groupedByFields ? 'GROUP BY ' + groupedByFields : ''}
+    ORDER BY date
+    `, values)
+
+    return result
+  }
+
   static GET_ALL = async () => {
     const fetchAbsenceResult = await query<any>(`
     SELECT
@@ -58,9 +88,8 @@ class AbsenceService {
     INSERT INTO absences (
       user_id, 
       date, 
-      type,
-      date_pending
-    ) VALUES ($1::integer, $2, $3, NOW()) 
+      type
+    ) VALUES ($1::integer, $2, $3) 
     RETURNING *
     `, [absence.user_id, absence.date, absence.type]);
 
@@ -89,9 +118,7 @@ class AbsenceService {
     let updateField = '';
 
     if (approval.is_approved) {
-      if (!absence.date_pending) {
-        updateField = 'date_pending = NOW()';
-      } else if (!absence.date_team_lead_approved) {
+      if (!absence.date_team_lead_approved) {
         updateField = 'date_team_lead_approved = NOW()';
       } else if (!absence.date_hr_approved) {
         updateField = 'date_hr_approved = NOW(), is_approved = TRUE';

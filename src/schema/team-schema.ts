@@ -4,4 +4,9 @@ const CreateTeamSchema = z.object({
   name: z.string({ message: "The Name field is required" })
 })
 
-export { CreateTeamSchema }
+const UpdateTeamSchema = z.object({
+  id: z.number({ message: "The ID field is required" }),
+  name: z.string({ message: "The Name field is required" })
+})
+
+export { CreateTeamSchema, UpdateTeamSchema }

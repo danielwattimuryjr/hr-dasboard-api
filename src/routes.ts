@@ -2,22 +2,23 @@ import { Router } from 'express'
 import { verifyRole } from './middleware/level-middleware';
 import {
   absenceRoute,
-  chartRouter,
-  employeeRouter,
+  chartRoute,
+  employeeRoute,
   profileRoute,
   projectRoute,
   roleRoute,
-  taskRouter,
+  taskRoute,
   teamRoute
 } from './route';
 
 export const routesWithAuth = Router();
 
-routesWithAuth.use('/employees/', verifyRole(['hr']), employeeRouter)
-routesWithAuth.use('/tasks/', taskRouter)
+routesWithAuth.use('/employees/', verifyRole(['hr']), employeeRoute)
+routesWithAuth.use('/tasks/', taskRoute)
 routesWithAuth.use('/profiles/', profileRoute)
 routesWithAuth.use('/absences/', absenceRoute)
 routesWithAuth.use('/projects/', projectRoute)
+routesWithAuth.use('/charts', chartRoute)
 
 export const routesWithoutAuth = Router()
 routesWithoutAuth.use('/teams', teamRoute)

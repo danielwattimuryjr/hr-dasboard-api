@@ -25,7 +25,7 @@ export const CreateUserSchema = z.object({
     .min(1, { message: "Team ID must be at least 1" })
 });
 
-export const UpdateUserProfileSchema = z.object({
+export const UpdateUserSchema = z.object({
   id: z.number({ message: "The ID is required" }),
   email: z.string({ message: "The email field is required" })
     .email({ message: "Please provide a valid email address" })

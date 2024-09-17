@@ -1,7 +1,7 @@
 import express from "express"
-import { getChartData } from "../controller/chart-controller"
+import ChartController from "../controller/charts"
 const route = express.Router()
 
-route.get('/:model', getChartData)
+route.get('/:model', ChartController.GET)
 
 export default route

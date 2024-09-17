@@ -1,14 +1,13 @@
 import express from "express";
-import { createEmployee, deleteEmployee, getAllEmployees, getAllEmployessClient, getEmployeeById, updateEmployee } from "../controller/employee-controller";
 import { validateData } from "../middleware/validation-middleware";
-import { CreateUserSchema, UpdateUserProfileSchema } from "../schema/user-schema";
+import { CreateUserSchema, UpdateUserSchema } from "../schema/user-schema";
+import EmployeeController from "../controller/employees";
 const route = express.Router();
 
-route.get('/', getAllEmployees);
-route.get('/client', getAllEmployessClient);
-route.post('/', validateData(CreateUserSchema), createEmployee);
-route.delete('/:user_id', deleteEmployee);
-route.get('/:user_id', getEmployeeById);
-route.put('/', validateData(UpdateUserProfileSchema), updateEmployee);
+route.get('/:user_id', EmployeeController.SHOW)
+route.get('/', EmployeeController.GET)
+route.post('/', validateData(CreateUserSchema), EmployeeController.STORE)
+route.put('/', validateData(UpdateUserSchema), EmployeeController.UPDATE)
+route.delete('/:user_id', EmployeeController.DELETE)
 
 export default route;

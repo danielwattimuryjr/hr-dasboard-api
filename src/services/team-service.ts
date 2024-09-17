@@ -2,7 +2,7 @@ import { query } from "../libs/pg"
 import { Employee, Team, TeamUser } from "../types"
 
 class TeamService {
-  static CREATE_TEAM = async (team: Team) => {
+  static STORE = async (team: Team) => {
     const result = await query<Team>(`
     INSERT INTO teams (
       name
@@ -13,15 +13,40 @@ class TeamService {
     return result?.rows.at(0)
   }
 
-  static GET = async () => {
+  static UPDATE = async (team: Team) => {
+    const result = await query<Team>(`
+    UPDATE 
+      teams
+    SET
+      name=$1
+    WHERE 
+      id=$2::integer
+    `, [team.name])
+
+    return result?.rows.at(0)
+  }
+
+  static GET = async (fields?: Record<string, any>) => {
+    const whereClauses: string[] = [];
+    const values: any[] = [];
+
+    for (const key in fields) {
+      if (fields.hasOwnProperty(key)) {
+        whereClauses.push(`${key} = $${values.length + 1}`);
+        values.push(fields[key]);
+      }
+    }
+    const whereClause = whereClauses.join(' AND ');
+
     const result = await query<Team>(`
       SELECT 
         * 
       FROM teams
+      ${whereClause ? 'WHERE ' + whereClause : ''}
       ORDER BY id ASC
     `)
 
-    return result?.rows
+    return result
   }
 
   static GET_BY_ID = async (team_id: number) => {
@@ -35,15 +60,10 @@ class TeamService {
     return result?.rows.at(0)
   }
 
-  static DELETE_TEAM = async (team_id: number) => {
+  static DELETE = async (team_id: number) => {
     await query(`
       DELETE FROM teams
       WHERE id=$1::integer
-    `, [team_id])
-
-    await query(`
-      DELETE FROM team_user
-      WHERE team_id=$1::integer
     `, [team_id])
   }
 

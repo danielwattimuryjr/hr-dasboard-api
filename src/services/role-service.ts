@@ -2,29 +2,29 @@ import { query } from "../libs/pg";
 import { Role } from "../types";
 
 class RoleService {
-  static GET_ALL = async (): Promise<Role[]> => {
+  static GET = async (fields?: Record<string, any>) => {
+    const whereClauses: string[] = [];
+    const values: any[] = [];
+
+    for (const key in fields) {
+      if (fields.hasOwnProperty(key)) {
+        whereClauses.push(`${key} = $${values.length + 1}`);
+        values.push(fields[key]);
+      }
+    }
+    const whereClause = whereClauses.join(' AND ');
+
     const fethAllRoleResult = await query<Role>(`
-    SELECT 
+    SELECT
       id,
       role_name,
-      display_name AS role
+      display_name AS "role"
     FROM roles
+    ${whereClause ? 'WHERE ' + whereClause : ''}
     ORDER BY role_name
-    `)
+    `, values)
 
-    return fethAllRoleResult?.rows || []
-  }
-
-  static GET_BY_ID = async (role_id: number) => {
-    const fetchRoleById = await query<Role>(`
-    SELECT
-      role_name,
-      display_name
-    FROM roles
-    WHERE id=$1::integer
-    `, [role_id])
-
-    return fetchRoleById?.rows.at(0)
+    return fethAllRoleResult
   }
 
   static STORE = async (role: Role) => {
@@ -57,24 +57,6 @@ class RoleService {
     DELETE FROM roles
     WHERE id=$1::integer
     `, [role_id])
-  }
-
-  static CHECK_DUPLICATE_ENTRY = async (role: Role, excludeId?: number) => {
-    const queryStr = `
-    SELECT id
-    FROM roles
-    WHERE (display_name = $1 OR role_name = $2)
-    ${excludeId !== undefined ? 'AND id != $3' : ''}
-    LIMIT 1
-  `;
-
-    const params = excludeId !== undefined
-      ? [role.display_name, role.role_name, excludeId]
-      : [role.display_name, role.role_name];
-
-    const result = await query<{ id: number }>(queryStr, params);
-
-    return result.rowCount > 0;
   }
 }
 

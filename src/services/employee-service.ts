@@ -152,6 +152,28 @@ class EmployeeService {
 
     return result?.rows.at(0);
   };
+
+  static GET = async (fields: Record<string, any>) => {
+    const whereClauses: string[] = [];
+    const values: any[] = []; // Store values for parameterized query
+
+    for (const key in fields) {
+      if (fields.hasOwnProperty(key)) {
+        whereClauses.push(`${key} = $${values.length + 1}`);
+        values.push(fields[key]);
+      }
+    }
+    const whereClause = whereClauses.join(' AND ');
+
+    const queryStr = `
+      SELECT * FROM public."users"
+      WHERE ${whereClause}
+    `;
+
+    const result = await query<Employee>(queryStr, values);
+
+    return result
+  }
 }
 
 export default EmployeeService
