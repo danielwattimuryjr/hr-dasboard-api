@@ -23,7 +23,8 @@ class AbsenceService {
     const result = await query<TResult>(`
     SELECT
       ${joinedFields}
-    FROM absences 
+    FROM absences a
+    JOIN public."users" u ON a.user_id = u.id
     ${whereClause ? 'WHERE ' + whereClause : ''}
     ${groupedByFields ? 'GROUP BY ' + groupedByFields : ''}
     ORDER BY date

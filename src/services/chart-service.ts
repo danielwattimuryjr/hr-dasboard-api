@@ -1,4 +1,4 @@
-import { getDailyWorkingHours } from "../controller/chart-controller";
+import { getDailyWorkingHours } from "../helper/function-helpter";
 import TaskService from "./task-service";
 
 class ChartService {
@@ -17,8 +17,8 @@ class ChartService {
       TaskService.GET_BY_EMPLOYEE_ID(employee_id, "weekly")
     ]);
 
-    const { series: monthlySeries } = getDailyWorkingHours(monthlyTasks);
-    const { series: weeklySeries } = getDailyWorkingHours(weeklyTasks);
+    const { series: monthlySeries } = getDailyWorkingHours(monthlyTasks, 'pie');
+    const { series: weeklySeries } = getDailyWorkingHours(weeklyTasks, 'pie');
 
     const weeklyHours = weeklySeries.reduce((series, val) => {
       return series + val
@@ -34,7 +34,7 @@ class ChartService {
   private static BAR_CHART = async (employee_id: number) => {
     const tasks = await TaskService.GET_BY_EMPLOYEE_ID(employee_id, "weekly")
 
-    const { series, option } = getDailyWorkingHours(tasks);
+    const { series, option } = getDailyWorkingHours(tasks, 'bar');
 
     return {
       option,

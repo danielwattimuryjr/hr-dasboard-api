@@ -63,8 +63,8 @@ class AbsenceValidation {
         ],
         conditions: {
           'user_id=$1': userId,
-          "date >= date_trunc('year', current_timestamp)": undefined,
-          "date < date_trunc('day', current_timestamp) + interval '1 day'": undefined,
+          "a.date >= date_trunc('year', current_timestamp)": undefined,
+          "a.date < date_trunc('day', current_timestamp) + interval '1 day'": undefined,
           "type IN ('AL', 'SL')": undefined
         },
         groupBy: ['date']

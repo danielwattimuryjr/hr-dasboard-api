@@ -49,7 +49,9 @@ class TeamValidation {
       team_id
     })
 
-    if (isAssigned) {
+    if (isAssigned?.rowCount !== undefined &&
+      isAssigned?.rowCount !== null &&
+      isAssigned?.rowCount > 0) {
       return {
         valid: false,
         message: "The Project with the same ID, already assigned to the team."

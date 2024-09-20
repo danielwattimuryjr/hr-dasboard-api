@@ -12,6 +12,7 @@ route.get("/history", AbsenceController.SHOW)
 route.post("/", validateData(absenceSchema), AbsenceController.POST)
 route.put('/', validateData(absenceApprovalSchema), AbsenceController.UPDATE)
 route.delete('/:absence_id', AbsenceController.DELETE)
+route.get('/get-analytics', AbsenceController.TEST_DATA)
 route.get('/get-pending', asyncHandler(async (req: Request, res: Response) => {
   const result = await query(`
   SELECT

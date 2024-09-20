@@ -13,7 +13,7 @@ import {
 
 export const routesWithAuth = Router();
 
-routesWithAuth.use('/employees/', verifyRole(['hr']), employeeRoute)
+routesWithAuth.use('/employees/', employeeRoute)
 routesWithAuth.use('/tasks/', taskRoute)
 routesWithAuth.use('/profiles/', profileRoute)
 routesWithAuth.use('/absences/', absenceRoute)

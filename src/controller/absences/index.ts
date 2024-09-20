@@ -3,6 +3,7 @@ import { Absence, ErrorResponse, SuccessResponse } from "../../types";
 import { asyncHandler } from "../../helper/async-helper";
 import AbsenceValidation from "./validation";
 import AbsenceService from "../../services/absence-service";
+import EmployeeService from "../../services/employee-service";
 
 type AbsenceRequest = Request<{
   absence_id?: number;
@@ -19,18 +20,12 @@ class AbsenceController {
       absences: Absence[]
     }>({
       fields: [
-        'user_id',
-        `ARRAY_AGG(
-          JSON_BUILD_OBJECT(
-            'id', id,
-            'date', date,
-            'type', type,
-            'isApproved', is_approved,
-            'reason', reason
-          )
-        ) AS absences`
-      ],
-      groupBy: ['user_id', 'date']
+        'u.id',
+        'a.user_id',
+        'u.name',
+        'a.date',
+        'a.type'
+      ]
     });
 
     return res.status(200).json({
@@ -40,12 +35,45 @@ class AbsenceController {
     })
   })
 
+  static TEST_DATA = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<any>) => {
+    const userId = Number(req.user?.id)
+
+    const leaves = await AbsenceService.GET<{ totalLeavesCount: number; }>({
+      conditions: {
+        "a.user_id=$1": userId,
+        "a.date >= date_trunc('month', current_timestamp)": undefined,
+        "a.date < date_trunc('month', current_timestamp) + interval '1 month'": undefined,
+      }
+    })
+
+    const notInOfficeData = await AbsenceService.GET<{ notInOfficeCount: number; }>({
+      conditions: {
+        "a.date = date_trunc('day', current_timestamp)": undefined,
+      }
+    })
+
+    const allEmployees = await EmployeeService.GET()
+    const totalEmployee = allEmployees?.rowCount || 0
+    const totalNotInOffice = notInOfficeData?.rowCount || 0
+    const totalLeaves = leaves?.rowCount || 0
+
+    res.status(200).json({
+      status: 200,
+      success: true,
+      data: {
+        vacationQuota: 5 - totalLeaves,
+        inOffice: totalEmployee - totalNotInOffice,
+        notInOffice: totalNotInOffice
+      }
+    })
+  })
+
   static SHOW = asyncHandler(async (req: AbsenceRequest, res: AbsenceResponse<Absence[]>) => {
     const userId = Number(req.user?.id)
 
     const data = await AbsenceValidation.isDataExist<Absence>({
       conditions: {
-        'user_id = $1': userId
+        'a.user_id = $1': userId
       }
     })
 
@@ -96,7 +124,7 @@ class AbsenceController {
 
     const data = await AbsenceValidation.isDataExist<Absence>({
       conditions: {
-        'id=$1': absence_id
+        'a.id=$1': absence_id
       }
     })
 

@@ -37,7 +37,7 @@ class EmployeeController {
     const userId = Number(req.params.user_id)
 
     const result = await EmployeeValidation.isDataExist({
-      id: userId
+      'u.id': userId
     })
 
     if (!result) {
@@ -79,7 +79,7 @@ class EmployeeController {
   static UPDATE = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<Employee>) => {
     const userId = Number(req.body.id)
     const isDataExist = await EmployeeValidation.isDataExist({
-      id: userId
+      'u.id': userId
     })
 
     if (!isDataExist) {
@@ -102,7 +102,7 @@ class EmployeeController {
   static DELETE = asyncHandler(async (req: EmployeeRequest, res: EmployeeResponse<undefined>) => {
     const userId = Number(req.params.user_id)
     const isExist = await EmployeeValidation.isDataExist({
-      id: userId
+      'u.id': userId
     })
 
     if (!isExist) {

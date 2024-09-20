@@ -6,7 +6,7 @@ export const verifyRole = (allowedLevels: EmployeeLevel[]) => {
     const user = req.user
 
     if (!user) {
-      return res.json({
+      return res.status(400).json({
         status: 400,
         message: `No user logged in yet.`
       } as ErrorResponse)
@@ -16,7 +16,7 @@ export const verifyRole = (allowedLevels: EmployeeLevel[]) => {
     const allowed = allowedLevels.includes(user.level);
 
     if (!allowed) {
-      return res.json({
+      return res.status(403).json({
         status: 403,
         message: `This route is protected`
       } as ErrorResponse)

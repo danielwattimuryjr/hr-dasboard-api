@@ -153,7 +153,7 @@ class EmployeeService {
     return result?.rows.at(0);
   };
 
-  static GET = async (fields: Record<string, any>) => {
+  static GET = async (fields?: Record<string, any>) => {
     const whereClauses: string[] = [];
     const values: any[] = []; // Store values for parameterized query
 
@@ -163,11 +163,12 @@ class EmployeeService {
         values.push(fields[key]);
       }
     }
-    const whereClause = whereClauses.join(' AND ');
 
     const queryStr = `
-      SELECT * FROM public."users"
-      WHERE ${whereClause}
+      SELECT u.*, r.display_name AS role, t.name AS "team" FROM public."users" u
+      JOIN roles r ON u.role_id=r.id
+      JOIN teams t ON u.team_id=t.id
+      ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}
     `;
 
     const result = await query<Employee>(queryStr, values);

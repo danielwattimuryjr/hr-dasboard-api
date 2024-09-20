@@ -17,7 +17,7 @@ class ProfileController {
     }
 
     const result = await EmployeeService.GET({
-      'id': user_id
+      'u.id': user_id
     })
 
     res.status(200).json({
