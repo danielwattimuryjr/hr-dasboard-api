@@ -21,5 +21,5 @@ routesWithAuth.use('/projects/', projectRoute)
 routesWithAuth.use('/charts', chartRoute)
 
 export const routesWithoutAuth = Router()
-routesWithoutAuth.use('/teams', teamRoute)
-routesWithoutAuth.use('/roles', roleRoute)
+routesWithAuth.use('/teams', teamRoute)
+routesWithAuth.use('/roles', roleRoute)
